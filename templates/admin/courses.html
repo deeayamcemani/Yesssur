@@ -1,0 +1,1186 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Courses - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    SA
+                </div>
+                <div class="user-info">
+                    <h3>System Administrator</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link active">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Course Management</h1>
+                <p class="page-subtitle">Create and manage courses in the system</p>
+                <button class="btn btn-primary" onclick="openModal('create-course-modal')">
+                    <i class="fas fa-plus"></i>
+                    Create New Course
+                </button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="controls-section">
+                <div class="search-filter">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchCourses" placeholder="Search courses..." onkeyup="filterCourses()">
+                    </div>
+                    <select class="filter-select" id="sortCourses" onchange="sortCourses()">
+                        <option value="name">Sort by Name</option>
+                        <option value="code">Sort by Code</option>
+                        <option value="students">Sort by Students</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Courses Grid -->
+            <div class="courses-grid" id="coursesList">
+                {% for course in courses %}
+                <div class="course-card" data-course-name="{{ course.course_title|lower }}" data-course-code="{{ course.course_code|lower }}">
+                    <div class="course-header">
+                        <div class="course-code">{{ course.course_code }}</div>
+                        <div class="course-actions">
+                            <button class="btn btn-info btn-sm" onclick="viewCourse({{ course.id }})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="editCourse({{ course.id }})" title="Edit Course">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="manageStudents({{ course.id }})" title="Manage Students">
+                                <i class="fas fa-users"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="confirmDeleteCourse({{ course.id }}, '{{ course.course_title }}')" title="Delete Course">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="course-title">{{ course.course_title }}</h3>
+                    <p class="course-lecturer"><i class="fas fa-user-tie"></i> {{ course.lecturer_name }}</p>
+                    {% if course.description %}
+                    <p class="course-description">{{ course.description[:100] }}{% if course.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                    <div class="course-stats">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ course.get_enrollment_count() }}</span>
+                            <span class="stat-label">Students</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ course.join_code }}</span>
+                            <span class="stat-label">Join Code</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">{{ course.class_sessions|length }}</span>
+                            <span class="stat-label">Classes</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-book-open"></i>
+                    <h3>No courses yet</h3>
+                    <p>Create your first course to get started.</p>
+                    <button class="btn btn-primary" onclick="openModal('create-course-modal')">
+                        <i class="fas fa-plus"></i>
+                        Create Course
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Course Modal -->
+<div id="create-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('create-course-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Course</h2>
+            <button class="modal-close" onclick="closeModal('create-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="create-course-form" onsubmit="handleCreateCourse(event)">
+                <div class="form-group">
+                    <label for="course_code">
+                        <i class="fas fa-code"></i>
+                        Course Code
+                    </label>
+                    <input type="text" id="course_code" name="course_code" 
+                           placeholder="e.g., CSC301" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="course_title">
+                        <i class="fas fa-book"></i>
+                        Course Title
+                    </label>
+                    <input type="text" id="course_title" name="course_title" 
+                           placeholder="e.g., Introduction to Computer Vision" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lecturer_name">
+                        <i class="fas fa-user-tie"></i>
+                        Lecturer Name
+                    </label>
+                    <input type="text" id="lecturer_name" name="lecturer_name" 
+                           placeholder="e.g., Dr. John Smith" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">
+                        <i class="fas fa-align-left"></i>
+                        Description (Optional)
+                    </label>
+                    <textarea id="description" name="description" rows="3"
+                              placeholder="Course description"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-course-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Create Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div id="edit-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('edit-course-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Course</h2>
+            <button class="modal-close" onclick="closeModal('edit-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-course-form" onsubmit="handleUpdateCourse(event)">
+                <input type="hidden" id="edit_course_id">
+                <div class="form-group">
+                    <label for="edit_course_code">
+                        <i class="fas fa-code"></i>
+                        Course Code
+                    </label>
+                    <input type="text" id="edit_course_code" name="course_code" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_course_title">
+                        <i class="fas fa-book"></i>
+                        Course Title
+                    </label>
+                    <input type="text" id="edit_course_title" name="course_title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_lecturer_name">
+                        <i class="fas fa-user-tie"></i>
+                        Lecturer Name
+                    </label>
+                    <input type="text" id="edit_lecturer_name" name="lecturer_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_description">
+                        <i class="fas fa-align-left"></i>
+                        Description (Optional)
+                    </label>
+                    <textarea id="edit_description" name="description" rows="3"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('edit-course-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i>
+                        Update Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Course Modal -->
+<div id="view-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('view-course-modal')"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2>Course Details</h2>
+            <button class="modal-close" onclick="closeModal('view-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="courseDetailsContent">
+            <!-- Course details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('delete-course-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+            <button class="modal-close" onclick="closeModal('delete-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-content">
+                <i class="fas fa-exclamation-triangle warning-icon"></i>
+                <p>Are you sure you want to delete <strong id="deleteCourseNameDisplay"></strong>?</p>
+                <p class="warning-text">This action cannot be undone and will remove:</p>
+                <ul class="warning-list">
+                    <li>All student enrollments</li>
+                    <li>All class sessions</li>
+                    <li>All attendance records</li>
+                    <li>All course data</li>
+                </ul>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('delete-course-modal')">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteCourse()">
+                    <i class="fas fa-trash"></i>
+                    Delete Course
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Include admin styles from dashboard */
+.admin-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.admin-avatar {
+    background: var(--accent-gradient);
+}
+
+.admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 85px;
+    width: 250px;
+    height: calc(100vh - 85px);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    padding: var(--spacing-lg);
+    z-index: 50;
+}
+
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.nav-link.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.nav-link i {
+    width: 20px;
+    text-align: center;
+}
+
+.admin-main {
+    margin-left: 250px;
+    min-height: calc(100vh - 85px);
+    background: var(--bg-primary);
+}
+
+.admin-content {
+    padding: var(--spacing-xl);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-2xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+}
+
+.page-header div {
+    flex: 1;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.course-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: all 0.3s ease;
+}
+
+.course-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.course-code {
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.course-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.btn-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+}
+
+.btn-danger {
+    background: var(--error);
+    color: white;
+    border: 1px solid var(--error);
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.course-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+.course-lecturer {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.course-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-lg);
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.empty-state p {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Modal styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--spacing-md);
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1001;
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+    margin-top: var(--spacing-lg);
+}
+
+/* Controls section */
+.controls-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.search-filter {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    z-index: 2;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.filter-select {
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    min-width: 160px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.course-description {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: var(--spacing-md);
+    line-height: 1.4;
+}
+
+.course-lecturer i {
+    margin-right: var(--spacing-xs);
+    color: var(--accent-primary);
+}
+
+.btn-info {
+    background: var(--info);
+    color: white;
+    border: 1px solid var(--info);
+}
+
+.btn-info:hover {
+    background: #0ea5e9;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+    border: 1px solid var(--success);
+}
+
+.btn-success:hover {
+    background: #16a34a;
+    transform: translateY(-1px);
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+    border: 1px solid var(--warning);
+}
+
+.btn-warning:hover {
+    background: #d97706;
+    transform: translateY(-1px);
+}
+
+/* Modal enhancements */
+.modal-lg .modal-content {
+    max-width: 700px;
+}
+
+.warning-content {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.warning-icon {
+    font-size: 3rem;
+    color: var(--warning);
+    margin-bottom: var(--spacing-md);
+}
+
+.warning-text {
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0;
+}
+
+.warning-list {
+    text-align: left;
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.warning-list li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.course-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+}
+
+.detail-section h6 {
+    color: var(--accent-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-md);
+}
+
+.detail-table {
+    width: 100%;
+    background: transparent;
+}
+
+.detail-table td {
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.detail-table td:first-child {
+    font-weight: 500;
+    width: 35%;
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 400px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification-success {
+    border-left: 4px solid var(--success);
+}
+
+.notification-error {
+    border-left: 4px solid var(--danger);
+}
+
+.notification-info {
+    border-left: 4px solid var(--info);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
+.notification-content i {
+    font-size: 1.2rem;
+}
+
+.notification-success i {
+    color: var(--success);
+}
+
+.notification-error i {
+    color: var(--danger);
+}
+
+.notification-info i {
+    color: var(--info);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    margin-left: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+}
+
+.notification-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .admin-main {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .admin-content {
+        padding: var(--spacing-lg);
+    }
+    
+    .notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle course creation (same as in dashboard)
+async function handleCreateCourse(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    
+    try {
+        const response = await fetch('/api/admin/create-course', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`Course created successfully! Join code: ${result.join_code}`, 'success');
+            closeModal('create-course-modal');
+            form.reset();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Failed to create course');
+        }
+        
+    } catch (error) {
+        console.error('Error creating course:', error);
+        showNotification(error.message || 'Failed to create course', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+let currentCourseId = null;
+
+// View course details
+async function viewCourse(courseId) {
+    try {
+        const response = await fetch(`/api/courses/${courseId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const course = result.course;
+            document.getElementById('courseDetailsContent').innerHTML = `
+                <div class="course-detail-grid">
+                    <div class="detail-section">
+                        <h6>Basic Information</h6>
+                        <table class="detail-table">
+                            <tr><td>Course Code:</td><td>${course.course_code}</td></tr>
+                            <tr><td>Course Title:</td><td>${course.course_title}</td></tr>
+                            <tr><td>Lecturer:</td><td>${course.lecturer_name}</td></tr>
+                            <tr><td>Description:</td><td>${course.description || 'No description provided'}</td></tr>
+                            <tr><td>Join Code:</td><td><strong>${course.join_code}</strong></td></tr>
+                            <tr><td>Created:</td><td>${new Date(course.created_date).toLocaleDateString()}</td></tr>
+                        </table>
+                    </div>
+                    <div class="detail-section">
+                        <h6>Statistics</h6>
+                        <table class="detail-table">
+                            <tr><td>Enrolled Students:</td><td>${course.enrollment_count || 0}</td></tr>
+                            <tr><td>Total Classes:</td><td>${course.class_count || 0}</td></tr>
+                            <tr><td>Attendance Rate:</td><td>${course.attendance_rate || 0}%</td></tr>
+                            <tr><td>Last Activity:</td><td>${course.last_activity || 'No activity yet'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            openModal('view-course-modal');
+        } else {
+            showNotification('Error loading course details: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error viewing course:', error);
+        showNotification('Error loading course details', 'error');
+    }
+}
+
+// Edit course
+async function editCourse(courseId) {
+    try {
+        const response = await fetch(`/api/courses/${courseId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const course = result.course;
+            document.getElementById('edit_course_id').value = course.id;
+            document.getElementById('edit_course_code').value = course.course_code;
+            document.getElementById('edit_course_title').value = course.course_title;
+            document.getElementById('edit_lecturer_name').value = course.lecturer_name;
+            document.getElementById('edit_description').value = course.description || '';
+            openModal('edit-course-modal');
+        } else {
+            showNotification('Error loading course data: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error loading course for edit:', error);
+        showNotification('Error loading course data', 'error');
+    }
+}
+
+// Update course
+async function handleUpdateCourse(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const courseId = document.getElementById('edit_course_id').value;
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    
+    try {
+        const response = await fetch(`/api/courses/${courseId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Course updated successfully!', 'success');
+            closeModal('edit-course-modal');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Failed to update course');
+        }
+        
+    } catch (error) {
+        console.error('Error updating course:', error);
+        showNotification(error.message || 'Failed to update course', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Confirm delete course
+function confirmDeleteCourse(courseId, courseName) {
+    currentCourseId = courseId;
+    document.getElementById('deleteCourseNameDisplay').textContent = courseName;
+    openModal('delete-course-modal');
+}
+
+// Delete course
+async function deleteCourse() {
+    if (!currentCourseId) return;
+    
+    const submitBtn = document.getElementById('confirmDeleteBtn');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    
+    try {
+        const response = await fetch(`/api/courses/${currentCourseId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Course deleted successfully!', 'success');
+            closeModal('delete-course-modal');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Failed to delete course');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting course:', error);
+        showNotification(error.message || 'Failed to delete course', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Manage students for a course
+function manageStudents(courseId) {
+    window.location.href = `/admin/students?course=${courseId}`;
+}
+
+// Filter courses
+function filterCourses() {
+    const searchTerm = document.getElementById('searchCourses').value.toLowerCase();
+    const courseCards = document.querySelectorAll('.course-card');
+    
+    courseCards.forEach(card => {
+        const courseName = card.getAttribute('data-course-name');
+        const courseCode = card.getAttribute('data-course-code');
+        
+        if (courseName.includes(searchTerm) || courseCode.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Sort courses
+function sortCourses() {
+    const sortBy = document.getElementById('sortCourses').value;
+    const coursesList = document.getElementById('coursesList');
+    const courseCards = Array.from(coursesList.children);
+    
+    courseCards.sort((a, b) => {
+        if (sortBy === 'name') {
+            return a.getAttribute('data-course-name').localeCompare(b.getAttribute('data-course-name'));
+        } else if (sortBy === 'code') {
+            return a.getAttribute('data-course-code').localeCompare(b.getAttribute('data-course-code'));
+        } else if (sortBy === 'students') {
+            const aStudents = parseInt(a.querySelector('.stat-value').textContent) || 0;
+            const bStudents = parseInt(b.querySelector('.stat-value').textContent) || 0;
+            return bStudents - aStudents;
+        }
+        return 0;
+    });
+    
+    courseCards.forEach(card => coursesList.appendChild(card));
+}
+
+// Modal utility functions
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Notification function
+function showNotification(message, type = 'info') {
+    // Remove any existing notifications
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

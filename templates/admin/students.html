@@ -1,0 +1,1283 @@
+{% extends "admin/courses.html" %}
+
+{% block title %}Manage Students - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    SA
+                </div>
+                <div class="user-info">
+                    <h3>System Administrator</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link active">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Student Management</h1>
+                    <p class="page-subtitle">View and manage registered students</p>
+                </div>
+                <div class="header-actions">
+                    <!-- Removed add student button as requested -->
+                </div>
+            </div>
+
+            <!-- Filter and Search Controls -->
+            <div class="controls-section">
+                <div class="search-filter">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchStudents" placeholder="Search students..." onkeyup="filterStudents()">
+                    </div>
+                    <select class="filter-select" id="filterCourse" onchange="filterByCourse()">
+                        <option value="">All Courses</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.course_code }} - {{ course.course_title }}</option>
+                        {% endfor %}
+                    </select>
+                    <select class="filter-select" id="sortStudents" onchange="sortStudents()">
+                        <option value="name">Sort by Name</option>
+                        <option value="matric">Sort by Matric Number</option>
+                        <option value="courses">Sort by Course Count</option>
+                        <option value="attendance">Sort by Attendance</option>
+                        <option value="date">Sort by Join Date</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Students Table -->
+            <div class="table-container">
+                <table class="data-table" id="studentsTable">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Matric Number</th>
+                            <th>Courses</th>
+                            <th>Attendance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="student-row" 
+                            data-student-name="{{ student.full_name|lower }}" 
+                            data-matric="{{ student.matric_number|lower }}" 
+                            data-courses="{{ student.enrollments|length }}" 
+                            data-attendance="{{ student.attendance_rate or 0 }}" 
+                            data-join-date="{{ student.created_at.isoformat() }}">
+                            <td>
+                                <div class="student-info">
+                                    <div class="student-avatar">
+                                        {{ student.full_name.split()[0][0] }}{{ student.full_name.split()[1][0] if student.full_name.split()|length > 1 else '' }}
+                                    </div>
+                                    <div class="student-details">
+                                        <div class="student-name">{{ student.full_name }}</div>
+                                        <div class="student-role">Student</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="matric-number">{{ student.matric_number }}</span></td>
+                            <td>
+                                <span class="badge badge-info">{{ student.enrollments|length }}</span>
+                            </td>
+                            <td>
+                                <div class="attendance-progress">
+                                    {% set attendance_rate = student.attendance_rate or 0 %}
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{ attendance_rate }}%"></div>
+                                    </div>
+                                    <span class="progress-text">{{ attendance_rate }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm" onclick="viewStudent({{ student.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" onclick="editStudent({{ student.id }})" title="Edit Student">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-success btn-sm" onclick="manageStudentCourses({{ student.id }})" title="Manage Courses">
+                                        <i class="fas fa-book"></i>
+                                    </button>
+                                    <button class="btn btn-warning btn-sm" onclick="viewStudentPassword({{ student.id }}, '{{ student.full_name }}')" title="View Password">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteStudent({{ student.id }}, '{{ student.full_name }}')" title="Delete Student">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="empty-cell">
+                                <div class="empty-state">
+                                    <i class="fas fa-user-graduate"></i>
+                                    <h3>No students registered</h3>
+                                    <p>Students will appear here once they create accounts.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Student Details Modal -->
+<div id="view-student-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('view-student-modal')"></div>
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Student Details</h2>
+            <button class="modal-close" onclick="closeModal('view-student-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="student-details-grid">
+                <div class="detail-section">
+                    <h3>Personal Information</h3>
+                    <div class="detail-item">
+                        <label>Full Name:</label>
+                        <span id="view-student-name"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Matric Number:</label>
+                        <span id="view-student-matric"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Join Date:</label>
+                        <span id="view-student-join-date"></span>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Academic Information</h3>
+                    <div class="detail-item">
+                        <label>Enrolled Courses:</label>
+                        <span id="view-student-courses"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Overall Attendance:</label>
+                        <span id="view-student-attendance"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status:</label>
+                        <span id="view-student-status" class="status-badge status-active">Active</span>
+                    </div>
+                </div>
+            </div>
+            <div class="enrolled-courses-list" id="view-enrolled-courses">
+                <h3>Course Enrollments</h3>
+                <div id="view-courses-container"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('view-student-modal')">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div id="edit-student-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('edit-student-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Student</h2>
+            <button class="modal-close" onclick="closeModal('edit-student-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-student-form" onsubmit="handleEditStudent(event)">
+                <input type="hidden" id="edit_student_id">
+                <div class="form-group">
+                    <label for="edit_full_name">
+                        <i class="fas fa-user"></i>
+                        Full Name
+                    </label>
+                    <input type="text" id="edit_full_name" name="full_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_matric_number">
+                        <i class="fas fa-id-card"></i>
+                        Matric Number
+                    </label>
+                    <input type="text" id="edit_matric_number" name="matric_number" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('edit-student-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Student Courses Modal -->
+<div id="manage-courses-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('manage-courses-modal')"></div>
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>Manage Student Courses</h2>
+            <button class="modal-close" onclick="closeModal('manage-courses-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Managing courses for <strong id="manageCourseStudentName"></strong></p>
+            <input type="hidden" id="manage_courses_student_id">
+            
+            <div class="courses-management">
+                <div class="enrolled-courses">
+                    <h3>Currently Enrolled Courses</h3>
+                    <div id="enrolled-courses-list" class="courses-list">
+                        <!-- Enrolled courses will be loaded here -->
+                    </div>
+                </div>
+                
+                <div class="available-courses">
+                    <h3>Available Courses</h3>
+                    <div id="available-courses-list" class="courses-list">
+                        <!-- Available courses will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('manage-courses-modal')">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- View Student Password Modal -->
+<div id="view-password-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('view-password-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Student Password</h2>
+            <button class="modal-close" onclick="closeModal('view-password-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Password for <strong id="passwordViewStudentName"></strong></p>
+            <div class="password-display">
+                <label>Current Password:</label>
+                <div class="password-field">
+                    <input type="password" id="displayed_password" readonly>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="togglePasswordVisibility()" id="toggle-password-btn">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="password-actions" style="margin-top: 20px;">
+                <button type="button" class="btn btn-warning" onclick="openChangePasswordModal()">
+                    <i class="fas fa-key"></i>
+                    Change Password
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('view-password-modal')">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Student Password Modal -->
+<div id="change-password-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('change-password-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Change Student Password</h2>
+            <button class="modal-close" onclick="closeModal('change-password-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Change password for <strong id="passwordChangeStudentName"></strong></p>
+            <form id="change-password-form" onsubmit="handleChangeStudentPassword(event)">
+                <input type="hidden" id="password_student_id">
+                <div class="form-group">
+                    <label for="new_password">
+                        <i class="fas fa-lock"></i>
+                        New Password
+                    </label>
+                    <input type="password" id="new_password" name="new_password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">
+                        <i class="fas fa-lock"></i>
+                        Confirm Password
+                    </label>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="6">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('change-password-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-key"></i>
+                        Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Student Modal -->
+<div id="delete-student-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('delete-student-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Student</h2>
+            <button class="modal-close" onclick="closeModal('delete-student-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Are you sure?</h3>
+                <p>You are about to delete <strong id="deleteStudentName"></strong>.</p>
+                <p>This action cannot be undone. All student records, enrollments, and attendance data will be permanently removed.</p>
+            </div>
+            <input type="hidden" id="delete_student_id">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('delete-student-modal')">
+                Cancel
+            </button>
+            <button type="button" class="btn btn-danger" onclick="confirmDeleteStudent()">
+                <i class="fas fa-trash"></i>
+                Delete Student
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+.table-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: var(--spacing-lg);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.student-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.student-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.badge-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.attendance-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.progress-bar {
+    width: 60px;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--success);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 35px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.empty-cell {
+    text-align: center;
+    padding: var(--spacing-2xl);
+}
+
+.empty-state {
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-md);
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.empty-state p {
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.student-email {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.multi-select {
+    min-height: 100px;
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+}
+
+.multi-select option {
+    padding: var(--spacing-xs);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.multi-select option:checked {
+    background: var(--accent-primary);
+}
+
+.enrollment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.enrollment-course {
+    display: flex;
+    flex-direction: column;
+}
+
+.enrollment-code {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.enrollment-title {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.enrollment-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* Modal styles */
+.modal-large {
+    max-width: 800px;
+}
+
+.student-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.detail-section h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--accent-primary);
+    padding-bottom: var(--spacing-xs);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.detail-item span {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.enrolled-courses-list h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--accent-primary);
+    padding-bottom: var(--spacing-xs);
+}
+
+.courses-management {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+.courses-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+}
+
+.course-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.course-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.course-code {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.course-title {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.password-display {
+    margin: var(--spacing-md) 0;
+}
+
+.password-field {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.password-field input {
+    flex: 1;
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+}
+
+.warning-message {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.warning-message i {
+    font-size: 3rem;
+    color: var(--danger);
+    margin-bottom: var(--spacing-md);
+}
+
+.warning-message h3 {
+    color: var(--danger);
+    margin-bottom: var(--spacing-sm);
+}
+
+.warning-message p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .data-table {
+        font-size: 0.875rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: var(--spacing-md);
+    }
+    
+    .student-info {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .action-buttons {
+        justify-content: center;
+    }
+    
+    .student-details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .courses-management {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStudentId = null;
+let currentStudentData = null;
+
+// View student details
+async function viewStudent(studentId) {
+    try {
+        const response = await fetch(`/api/students/${studentId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const student = result.student;
+            currentStudentData = student;
+            
+            // Populate student details
+            document.getElementById('view-student-name').textContent = student.full_name;
+            document.getElementById('view-student-matric').textContent = student.matric_number;
+            document.getElementById('view-student-join-date').textContent = new Date(student.created_at).toLocaleDateString();
+            document.getElementById('view-student-courses').textContent = student.enrollments.length;
+            document.getElementById('view-student-attendance').textContent = (student.attendance_rate || 0) + '%';
+            
+            // Populate enrolled courses
+            const coursesContainer = document.getElementById('view-courses-container');
+            coursesContainer.innerHTML = '';
+            
+            if (student.enrollments.length > 0) {
+                student.enrollments.forEach(enrollment => {
+                    const courseDiv = document.createElement('div');
+                    courseDiv.className = 'course-item';
+                    courseDiv.innerHTML = `
+                        <div class="course-info">
+                            <div class="course-code">${enrollment.course.course_code}</div>
+                            <div class="course-title">${enrollment.course.course_title}</div>
+                        </div>
+                        <div class="enrollment-date">
+                            <small>Enrolled: ${new Date(enrollment.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `;
+                    coursesContainer.appendChild(courseDiv);
+                });
+            } else {
+                coursesContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No courses enrolled</p>';
+            }
+            
+            openModal('view-student-modal');
+        } else {
+            throw new Error(result.message || 'Failed to load student details');
+        }
+    } catch (error) {
+        console.error('Error loading student details:', error);
+        showNotification(error.message || 'Failed to load student details', 'error');
+    }
+}
+
+// Edit student
+async function editStudent(studentId) {
+    try {
+        const response = await fetch(`/api/students/${studentId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const student = result.student;
+            currentStudentId = studentId;
+            
+            // Populate form fields
+            document.getElementById('edit_student_id').value = studentId;
+            document.getElementById('edit_full_name').value = student.full_name;
+            document.getElementById('edit_matric_number').value = student.matric_number;
+            
+            openModal('edit-student-modal');
+        } else {
+            throw new Error(result.message || 'Failed to load student data');
+        }
+    } catch (error) {
+        console.error('Error loading student data:', error);
+        showNotification(error.message || 'Failed to load student data', 'error');
+    }
+}
+
+// Handle edit student
+async function handleEditStudent(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    const studentId = data.edit_student_id || currentStudentId;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    try {
+        const response = await fetch(`/api/students/${studentId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                full_name: data.full_name,
+                matric_number: data.matric_number
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Student updated successfully!', 'success');
+            closeModal('edit-student-modal');
+            location.reload(); // Refresh to show updated data
+        } else {
+            throw new Error(result.message || 'Failed to update student');
+        }
+        
+    } catch (error) {
+        console.error('Error updating student:', error);
+        showNotification(error.message || 'Failed to update student', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Manage student courses
+async function manageStudentCourses(studentId) {
+    try {
+        const [studentResponse, coursesResponse] = await Promise.all([
+            fetch(`/api/students/${studentId}`),
+            fetch('/api/courses')
+        ]);
+        
+        const studentResult = await studentResponse.json();
+        const coursesResult = await coursesResponse.json();
+        
+        if (studentResult.success && coursesResult.success) {
+            const student = studentResult.student;
+            const allCourses = coursesResult.courses;
+            
+            currentStudentId = studentId;
+            document.getElementById('manageCourseStudentName').textContent = student.full_name;
+            document.getElementById('manage_courses_student_id').value = studentId;
+            
+            const enrolledCourseIds = student.enrollments.map(e => e.course.id);
+            const availableCourses = allCourses.filter(course => !enrolledCourseIds.includes(course.id));
+            
+            // Populate enrolled courses
+            const enrolledContainer = document.getElementById('enrolled-courses-list');
+            enrolledContainer.innerHTML = '';
+            
+            if (student.enrollments.length > 0) {
+                student.enrollments.forEach(enrollment => {
+                    const courseDiv = document.createElement('div');
+                    courseDiv.className = 'course-item';
+                    courseDiv.innerHTML = `
+                        <div class="course-info">
+                            <div class="course-code">${enrollment.course.course_code}</div>
+                            <div class="course-title">${enrollment.course.course_title}</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="unenrollStudent(${studentId}, ${enrollment.course.id})">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                    `;
+                    enrolledContainer.appendChild(courseDiv);
+                });
+            } else {
+                enrolledContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No courses enrolled</p>';
+            }
+            
+            // Populate available courses
+            const availableContainer = document.getElementById('available-courses-list');
+            availableContainer.innerHTML = '';
+            
+            if (availableCourses.length > 0) {
+                availableCourses.forEach(course => {
+                    const courseDiv = document.createElement('div');
+                    courseDiv.className = 'course-item';
+                    courseDiv.innerHTML = `
+                        <div class="course-info">
+                            <div class="course-code">${course.course_code}</div>
+                            <div class="course-title">${course.course_title}</div>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="enrollStudent(${studentId}, ${course.id})">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    `;
+                    availableContainer.appendChild(courseDiv);
+                });
+            } else {
+                availableContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">All courses enrolled</p>';
+            }
+            
+            openModal('manage-courses-modal');
+        } else {
+            throw new Error('Failed to load student or course data');
+        }
+    } catch (error) {
+        console.error('Error loading course management data:', error);
+        showNotification(error.message || 'Failed to load course data', 'error');
+    }
+}
+
+// Enroll student in course
+async function enrollStudent(studentId, courseId) {
+    try {
+        const response = await fetch('/api/enrollments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                course_id: courseId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Student enrolled successfully!', 'success');
+            manageStudentCourses(studentId); // Refresh the modal
+        } else {
+            throw new Error(result.message || 'Failed to enroll student');
+        }
+    } catch (error) {
+        console.error('Error enrolling student:', error);
+        showNotification(error.message || 'Failed to enroll student', 'error');
+    }
+}
+
+// Unenroll student from course
+async function unenrollStudent(studentId, courseId) {
+    try {
+        const response = await fetch(`/api/enrollments/${studentId}/${courseId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Student unenrolled successfully!', 'success');
+            manageStudentCourses(studentId); // Refresh the modal
+        } else {
+            throw new Error(result.message || 'Failed to unenroll student');
+        }
+    } catch (error) {
+        console.error('Error unenrolling student:', error);
+        showNotification(error.message || 'Failed to unenroll student', 'error');
+    }
+}
+
+// View student password
+async function viewStudentPassword(studentId, studentName) {
+    try {
+        const response = await fetch(`/api/students/${studentId}/password`);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentStudentId = studentId;
+            document.getElementById('passwordViewStudentName').textContent = studentName;
+            document.getElementById('displayed_password').value = result.password;
+            document.getElementById('displayed_password').type = 'password';
+            document.getElementById('toggle-password-btn').innerHTML = '<i class="fas fa-eye"></i>';
+            
+            openModal('view-password-modal');
+        } else {
+            throw new Error(result.message || 'Failed to load password');
+        }
+    } catch (error) {
+        console.error('Error loading password:', error);
+        showNotification(error.message || 'Failed to load password', 'error');
+    }
+}
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+    const passwordField = document.getElementById('displayed_password');
+    const toggleBtn = document.getElementById('toggle-password-btn');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+    } else {
+        passwordField.type = 'password';
+        toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+    }
+}
+
+// Open change password modal from view password modal
+function openChangePasswordModal() {
+    closeModal('view-password-modal');
+    const studentName = document.getElementById('passwordViewStudentName').textContent;
+    changeStudentPassword(currentStudentId, studentName);
+}
+
+// Change student password
+function changeStudentPassword(studentId, studentName) {
+    currentStudentId = studentId;
+    document.getElementById('passwordChangeStudentName').textContent = studentName;
+    document.getElementById('password_student_id').value = studentId;
+    document.getElementById('new_password').value = '';
+    document.getElementById('confirm_password').value = '';
+    openModal('change-password-modal');
+}
+
+// Handle password change
+async function handleChangeStudentPassword(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    if (data.new_password !== data.confirm_password) {
+        showNotification('Passwords do not match', 'error');
+        return;
+    }
+    
+    const studentId = data.password_student_id || currentStudentId;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing...';
+    
+    try {
+        const response = await fetch(`/api/students/${studentId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password: data.new_password })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Password changed successfully!', 'success');
+            closeModal('change-password-modal');
+            form.reset();
+        } else {
+            throw new Error(result.message || 'Failed to change password');
+        }
+        
+    } catch (error) {
+        console.error('Error changing password:', error);
+        showNotification(error.message || 'Failed to change password', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Delete student
+function deleteStudent(studentId, studentName) {
+    currentStudentId = studentId;
+    document.getElementById('deleteStudentName').textContent = studentName;
+    document.getElementById('delete_student_id').value = studentId;
+    openModal('delete-student-modal');
+}
+
+// Confirm delete student
+async function confirmDeleteStudent() {
+    const studentId = document.getElementById('delete_student_id').value || currentStudentId;
+    const deleteBtn = document.querySelector('#delete-student-modal .btn-danger');
+    const originalContent = deleteBtn.innerHTML;
+    
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    
+    try {
+        const response = await fetch(`/api/students/${studentId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Student deleted successfully!', 'success');
+            closeModal('delete-student-modal');
+            location.reload(); // Refresh to remove deleted student
+        } else {
+            throw new Error(result.message || 'Failed to delete student');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting student:', error);
+        showNotification(error.message || 'Failed to delete student', 'error');
+    } finally {
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalContent;
+    }
+}
+
+// Filter students
+function filterStudents() {
+    const searchTerm = document.getElementById('searchStudents').value.toLowerCase();
+    const studentRows = document.querySelectorAll('.student-row');
+    
+    studentRows.forEach(row => {
+        const studentName = row.getAttribute('data-student-name');
+        const matric = row.getAttribute('data-matric');
+        
+        if (studentName.includes(searchTerm) || matric.includes(searchTerm)) {
+            row.style.display = 'table-row';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Filter by course
+function filterByCourse() {
+    const courseId = document.getElementById('filterCourse').value;
+    if (!courseId) {
+        // Show all students if no course selected
+        document.querySelectorAll('.student-row').forEach(row => {
+            row.style.display = 'table-row';
+        });
+        return;
+    }
+    
+    // This would require backend API to filter by course enrollment
+    fetch(`/api/students?course=${courseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const studentIds = data.students.map(s => s.id);
+                document.querySelectorAll('.student-row').forEach(row => {
+                    const studentId = parseInt(row.querySelector('.btn[onclick*="viewStudent"]').getAttribute('onclick').match(/\d+/)[0]);
+                    if (studentIds.includes(studentId)) {
+                        row.style.display = 'table-row';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+        })
+        .catch(error => console.error('Error filtering by course:', error));
+}
+
+// Sort students
+function sortStudents() {
+    const sortBy = document.getElementById('sortStudents').value;
+    const tbody = document.querySelector('#studentsTable tbody');
+    const rows = Array.from(tbody.querySelectorAll('.student-row'));
+    
+    rows.sort((a, b) => {
+        if (sortBy === 'name') {
+            return a.getAttribute('data-student-name').localeCompare(b.getAttribute('data-student-name'));
+        } else if (sortBy === 'matric') {
+            return a.getAttribute('data-matric').localeCompare(b.getAttribute('data-matric'));
+        } else if (sortBy === 'courses') {
+            return parseInt(b.getAttribute('data-courses')) - parseInt(a.getAttribute('data-courses'));
+        } else if (sortBy === 'attendance') {
+            return parseFloat(b.getAttribute('data-attendance')) - parseFloat(a.getAttribute('data-attendance'));
+        } else if (sortBy === 'date') {
+            return new Date(b.getAttribute('data-join-date')) - new Date(a.getAttribute('data-join-date'));
+        }
+        return 0;
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+{% endblock %}

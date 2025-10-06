@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.course_code }} - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('courses') }}" class="header-logo">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Courses</span>
+                </a>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar">
+                    {{ user.full_name.split()[0][0] }}{{ user.full_name.split()[1][0] if user.full_name.split()|length > 1 else '' }}
+                </div>
+                <div class="user-info">
+                    <h3>{{ user.full_name }}</h3>
+                    <p>Student</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Course Header -->
+        <div class="course-header">
+            <div class="course-info">
+                <div class="course-badge">{{ course.course_code }}</div>
+                <h1 class="course-title">{{ course.course_title }}</h1>
+                <p class="course-lecturer">
+                    <i class="fas fa-user-tie"></i>
+                    {{ course.lecturer_name }}
+                </p>
+            </div>
+            <div class="course-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="attendance-percentage">--</div>
+                    <div class="stat-label">Attendance Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-classes">--</div>
+                    <div class="stat-label">Total Classes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="attended-classes">--</div>
+                    <div class="stat-label">Classes Attended</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Attendance Table -->
+        <div class="attendance-section">
+            <div class="section-header">
+                <h2>Weekly Attendance Records</h2>
+                <p>Showing attendance records for the last 12 weeks</p>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-loading" id="table-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading attendance records...
+                </div>
+                
+                <div class="table-responsive" id="attendance-table-container" style="display: none;">
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Week</th>
+                                <th>Monday</th>
+                                <th>Tuesday</th>
+                                <th>Wednesday</th>
+                                <th>Thursday</th>
+                                <th>Friday</th>
+                                <th>Saturday</th>
+                                <th>Sunday</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body">
+                            <!-- Attendance records will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="empty-state" id="empty-state" style="display: none;">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>No attendance records</h3>
+                    <p>Your attendance records will appear here once you start attending classes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-content">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('courses') }}" class="nav-item active">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('announcements') }}" class="nav-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.course-header {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+}
+
+.course-badge {
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-sm);
+    display: inline-block;
+}
+
+.course-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.3;
+}
+
+.course-lecturer {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.course-lecturer i {
+    color: var(--accent-primary);
+}
+
+.course-stats {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    text-align: center;
+    min-width: 100px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.attendance-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.section-header {
+    padding: var(--spacing-xl);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.section-header p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.table-container {
+    position: relative;
+    min-height: 300px;
+}
+
+.table-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
+    gap: var(--spacing-md);
+}
+
+.table-loading i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.table-responsive {
+    overflow-x: auto;
+    padding: var(--spacing-lg);
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.attendance-table th,
+.attendance-table td {
+    padding: var(--spacing-md);
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.attendance-table th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    position: sticky;
+    top: 0;
+}
+
+.attendance-table th:first-child {
+    text-align: left;
+    width: 120px;
+}
+
+.week-cell {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.attendance-cell {
+    position: relative;
+    padding: var(--spacing-sm);
+}
+
+.attendance-status {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 24px;
+    text-align: center;
+    color: white;
+    text-transform: uppercase;
+}
+
+.attendance-status.present {
+    background: var(--success);
+}
+
+.attendance-status.absent {
+    background: var(--error);
+}
+
+.attendance-status.no-class {
+    background: var(--text-muted);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    background: transparent;
+}
+
+.attendance-time {
+    display: block;
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-lg);
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .course-header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .course-stats {
+        justify-content: center;
+    }
+    
+    .stat-card {
+        flex: 1;
+        min-width: 80px;
+    }
+    
+    .table-responsive {
+        padding: var(--spacing-sm);
+    }
+    
+    .attendance-table {
+        font-size: 0.75rem;
+    }
+    
+    .attendance-table th,
+    .attendance-table td {
+        padding: var(--spacing-sm);
+    }
+    
+    .attendance-status {
+        width: 20px;
+        height: 20px;
+        font-size: 0.625rem;
+        line-height: 20px;
+    }
+}
+
+/* Animation for loading */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.table-responsive {
+    animation: fadeIn 0.5s ease-out;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const courseId = {{ course.id }};
+
+// Load course data and attendance records
+document.addEventListener('DOMContentLoaded', function() {
+    loadCourseStats();
+    loadWeeklyAttendance();
+});
+
+// Load course statistics
+async function loadCourseStats() {
+    try {
+        const response = await fetch(`/api/course/${courseId}/details`);
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('attendance-percentage').textContent = data.attendance_percentage + '%';
+            document.getElementById('total-classes').textContent = data.total_classes;
+            document.getElementById('attended-classes').textContent = data.classes_attended;
+        }
+    } catch (error) {
+        console.error('Error loading course stats:', error);
+    }
+}
+
+// Load weekly attendance data
+async function loadWeeklyAttendance() {
+    try {
+        const response = await fetch(`/api/course/${courseId}/weekly-attendance`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderWeeklyAttendance(data.weekly_attendance);
+        } else {
+            showEmptyState();
+        }
+    } catch (error) {
+        console.error('Error loading weekly attendance:', error);
+        showEmptyState();
+    } finally {
+        document.getElementById('table-loading').style.display = 'none';
+    }
+}
+
+// Render weekly attendance table
+function renderWeeklyAttendance(weeklyData) {
+    const tableBody = document.getElementById('attendance-table-body');
+    const tableContainer = document.getElementById('attendance-table-container');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (!weeklyData || Object.keys(weeklyData).length === 0) {
+        showEmptyState();
+        return;
+    }
+    
+    tableBody.innerHTML = '';
+    
+    // Sort weeks by date (newest first)
+    const sortedWeeks = Object.entries(weeklyData).sort((a, b) => 
+        new Date(b[1].week_start) - new Date(a[1].week_start)
+    );
+    
+    sortedWeeks.forEach(([weekKey, weekData]) => {
+        const row = document.createElement('tr');
+        const weekStart = new Date(weekData.week_start);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        // Week column
+        const weekCell = document.createElement('td');
+        weekCell.className = 'week-cell';
+        weekCell.innerHTML = `
+            <div>${formatDateRange(weekStart, weekEnd)}</div>
+        `;
+        row.appendChild(weekCell);
+        
+        // Days of the week
+        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+            const currentDate = new Date(weekStart);
+            currentDate.setDate(currentDate.getDate() + dayOffset);
+            
+            const dayCell = document.createElement('td');
+            dayCell.className = 'attendance-cell';
+            
+            // Find attendance record for this day
+            const dayRecord = weekData.records.find(record => {
+                const recordDate = new Date(record.date);
+                return recordDate.toDateString() === currentDate.toDateString();
+            });
+            
+            if (dayRecord) {
+                dayCell.innerHTML = `
+                    <div class="attendance-status ${dayRecord.status}">
+                        ${dayRecord.status === 'present' ? 'P' : 'A'}
+                    </div>
+                    <div class="attendance-time">${dayRecord.time}</div>
+                `;
+            } else {
+                dayCell.innerHTML = `
+                    <div class="attendance-status no-class">-</div>
+                `;
+            }
+            
+            row.appendChild(dayCell);
+        }
+        
+        tableBody.appendChild(row);
+    });
+    
+    tableContainer.style.display = 'block';
+    emptyState.style.display = 'none';
+}
+
+// Show empty state
+function showEmptyState() {
+    document.getElementById('attendance-table-container').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'flex';
+}
+
+// Format date range for week display
+function formatDateRange(start, end) {
+    const startStr = start.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+    });
+    const endStr = end.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+    });
+    
+    if (start.getMonth() === end.getMonth()) {
+        return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
+    } else {
+        return `${startStr} - ${endStr}`;
+    }
+}
+
+// Format single date
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+</script>
+{% endblock %}

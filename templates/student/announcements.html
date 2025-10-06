@@ -1,0 +1,491 @@
+{% extends "base.html" %}
+
+{% block title %}Announcements - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar">
+                    {{ user.full_name.split()[0][0] }}{{ user.full_name.split()[1][0] if user.full_name.split()|length > 1 else '' }}
+                </div>
+                <div class="user-info">
+                    <h3>{{ user.full_name }}</h3>
+                    <p>Student</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Announcements</h1>
+                <p class="page-subtitle">Stay updated with course notifications</p>
+            </div>
+            <div class="announcement-actions">
+                <button class="btn btn-secondary" id="mark-all-read-btn" onclick="markAllAsRead()" style="display: none;">
+                    <i class="fas fa-check-double"></i>
+                    Mark All Read
+                </button>
+                <div class="notification-count">
+                    <span id="unread-count">0</span> unread
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loading-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading announcements...</p>
+        </div>
+
+        <!-- Announcements List -->
+        <div class="announcements-container" id="announcements-container" style="display: none;">
+            <div class="announcements-list" id="announcements-list">
+                <!-- Announcements will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <i class="fas fa-bell-slash"></i>
+            <h3>No announcements yet</h3>
+            <p>Check back later for updates from your courses.</p>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-content">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('courses') }}" class="nav-item">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('announcements') }}" class="nav-item active">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.announcement-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.notification-count {
+    background: var(--bg-tertiary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.notification-count span {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.loading-state i {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--accent-primary);
+}
+
+.announcements-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.announcement-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: pointer;
+}
+
+.announcement-card.unread {
+    border-left: 4px solid var(--accent-primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.announcement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.announcement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.announcement-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
+}
+
+.announcement-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--spacing-xs);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.announcement-course {
+    background: var(--accent-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.announcement-date {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.announcement-content {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--spacing-md);
+}
+
+.announcement-priority {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.announcement-priority.high {
+    background: var(--warning);
+}
+
+.announcement-priority.urgent {
+    background: var(--error);
+    animation: pulse 2s infinite;
+}
+
+.announcement-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+}
+
+.read-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.read-indicator.read {
+    color: var(--success);
+}
+
+.read-indicator i {
+    font-size: 0.75rem;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .announcement-actions {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .announcement-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .announcement-meta {
+        align-items: flex-start;
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let announcements = [];
+let refreshInterval;
+
+// Load announcements on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnnouncements();
+    
+    // Set up auto-refresh every 30 seconds
+    refreshInterval = setInterval(loadAnnouncements, 30000);
+});
+
+// Clean up interval when page is unloaded
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+
+// Load announcements from API
+async function loadAnnouncements() {
+    try {
+        const response = await fetch('/api/announcements');
+        const data = await response.json();
+        
+        if (data.success) {
+            announcements = data.announcements;
+            renderAnnouncements();
+            updateUnreadCount(data.unread_count);
+        } else {
+            showEmptyState();
+        }
+    } catch (error) {
+        console.error('Error loading announcements:', error);
+        showEmptyState();
+    } finally {
+        document.getElementById('loading-state').style.display = 'none';
+    }
+}
+
+// Render announcements
+function renderAnnouncements() {
+    const container = document.getElementById('announcements-container');
+    const list = document.getElementById('announcements-list');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (announcements.length === 0) {
+        showEmptyState();
+        return;
+    }
+    
+    list.innerHTML = '';
+    
+    announcements.forEach(announcement => {
+        const announcementElement = createAnnouncementElement(announcement);
+        list.appendChild(announcementElement);
+    });
+    
+    container.style.display = 'block';
+    emptyState.style.display = 'none';
+}
+
+// Create announcement element
+function createAnnouncementElement(announcement) {
+    const element = document.createElement('div');
+    element.className = `announcement-card ${announcement.is_read ? 'read' : 'unread'}`;
+    element.onclick = () => markAsRead(announcement.id);
+    
+    const priorityClass = announcement.priority !== 'normal' ? announcement.priority : '';
+    const courseDisplay = announcement.course_code ? 
+        `<div class="announcement-course">${announcement.course_code}</div>` : '';
+    
+    element.innerHTML = `
+        <div class="announcement-priority ${priorityClass}"></div>
+        <div class="announcement-header">
+            <div>
+                <h3 class="announcement-title">${announcement.title}</h3>
+                <div class="announcement-author">by ${announcement.author}</div>
+            </div>
+            <div class="announcement-meta">
+                ${courseDisplay}
+                <div class="announcement-date">
+                    <i class="fas fa-clock"></i>
+                    ${formatDate(announcement.created_at)}
+                </div>
+            </div>
+        </div>
+        <div class="announcement-content">
+            ${announcement.content}
+        </div>
+        <div class="announcement-actions">
+            <div class="read-indicator ${announcement.is_read ? 'read' : ''}">
+                <i class="fas ${announcement.is_read ? 'fa-check' : 'fa-circle'}"></i>
+                ${announcement.is_read ? 'Read' : 'New'}
+            </div>
+        </div>
+    `;
+    
+    return element;
+}
+
+// Mark individual announcement as read
+async function markAsRead(announcementId) {
+    try {
+        const response = await fetch(`/api/announcements/${announcementId}/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update local state
+            const announcement = announcements.find(a => a.id === announcementId);
+            if (announcement && !announcement.is_read) {
+                announcement.is_read = true;
+                renderAnnouncements();
+                
+                // Update unread count
+                const unreadCount = announcements.filter(a => !a.is_read).length;
+                updateUnreadCount(unreadCount);
+            }
+        }
+    } catch (error) {
+        console.error('Error marking announcement as read:', error);
+    }
+}
+
+// Mark all announcements as read
+async function markAllAsRead() {
+    try {
+        const response = await fetch('/api/announcements/mark-all-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update local state
+            announcements.forEach(announcement => {
+                announcement.is_read = true;
+            });
+            
+            renderAnnouncements();
+            updateUnreadCount(0);
+            showNotification('All announcements marked as read', 'success');
+        } else {
+            throw new Error(result.message || 'Failed to mark all as read');
+        }
+    } catch (error) {
+        console.error('Error marking all as read:', error);
+        showNotification(error.message || 'Failed to mark all as read', 'error');
+    }
+}
+
+// Update unread count display
+function updateUnreadCount(count) {
+    const unreadElement = document.getElementById('unread-count');
+    const markAllBtn = document.getElementById('mark-all-read-btn');
+    
+    unreadElement.textContent = count;
+    
+    if (count > 0) {
+        markAllBtn.style.display = 'block';
+    } else {
+        markAllBtn.style.display = 'none';
+    }
+}
+
+// Show empty state
+function showEmptyState() {
+    document.getElementById('announcements-container').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'block';
+    updateUnreadCount(0);
+}
+
+// Format date
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) {
+        return 'Just now';
+    } else if (diffHours < 24) {
+        return `${diffHours}h ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+    } else {
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+    }
+}
+</script>
+{% endblock %}

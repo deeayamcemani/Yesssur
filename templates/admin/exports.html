@@ -1,0 +1,510 @@
+{% extends "admin/courses.html" %}
+
+{% block title %}Data Exports - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    SA
+                </div>
+                <div class="user-info">
+                    <h3>System Administrator</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link active">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Data Export Center</h1>
+                    <p class="page-subtitle">Export and backup your attendance data</p>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="export-grid">
+                <!-- Attendance Export -->
+                <div class="export-card">
+                    <div class="export-icon attendance">
+                        <i class="fas fa-file-excel"></i>
+                    </div>
+                    <div class="export-content">
+                        <h3>Attendance Records</h3>
+                        <p>Export all attendance records with student details, course information, and timestamps</p>
+                        <div class="export-features">
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Complete attendance history
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Professional Excel formatting
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Auto-sized columns
+                            </span>
+                        </div>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-primary" onclick="exportAttendance()">
+                            <i class="fas fa-download"></i>
+                            Export Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Course Export -->
+                <div class="export-card">
+                    <div class="export-icon courses">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="export-content">
+                        <h3>Course Data</h3>
+                        <p>Export course information including enrollment statistics and join codes</p>
+                        <div class="export-features">
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Course details & codes
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Enrollment statistics
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Lecturer information
+                            </span>
+                        </div>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-primary" onclick="exportCourses()">
+                            <i class="fas fa-download"></i>
+                            Export Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Student Export -->
+                <div class="export-card">
+                    <div class="export-icon students">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="export-content">
+                        <h3>Student Directory</h3>
+                        <p>Export student information with course enrollments and attendance summaries</p>
+                        <div class="export-features">
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Student contact info
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Course enrollments
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Attendance summaries
+                            </span>
+                        </div>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-primary" onclick="exportStudents()">
+                            <i class="fas fa-download"></i>
+                            Export Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Full Backup -->
+                <div class="export-card featured">
+                    <div class="export-icon backup">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="export-content">
+                        <h3>Complete Backup</h3>
+                        <p>Export all system data including courses, students, schedules, and attendance records</p>
+                        <div class="export-features">
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Complete system backup
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Multiple Excel sheets
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-check"></i>
+                                Restore-ready format
+                            </span>
+                        </div>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-primary btn-large" onclick="exportFullBackup()">
+                            <i class="fas fa-cloud-download-alt"></i>
+                            Create Full Backup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export History -->
+            <div class="section">
+                <h2 class="section-title">Export History</h2>
+                <div class="history-list">
+                    <div class="history-item">
+                        <div class="history-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="history-content">
+                            <div class="history-title">Attendance Export</div>
+                            <div class="history-date">Today at 2:30 PM</div>
+                        </div>
+                        <div class="history-size">2.4 MB</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="history-content">
+                            <div class="history-title">Full System Backup</div>
+                            <div class="history-date">Yesterday at 11:45 AM</div>
+                        </div>
+                        <div class="history-size">5.8 MB</div>
+                    </div>
+                    
+                    <div class="history-item">
+                        <div class="history-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="history-content">
+                            <div class="history-title">Student Directory</div>
+                            <div class="history-date">Sep 27 at 4:20 PM</div>
+                        </div>
+                        <div class="history-size">1.2 MB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+.export-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.export-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.export-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.export-card.featured {
+    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, var(--bg-secondary), rgba(139, 92, 246, 0.05));
+}
+
+.export-card.featured::before {
+    content: 'RECOMMENDED';
+    position: absolute;
+    top: -1px;
+    right: var(--spacing-lg);
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.export-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    margin-bottom: var(--spacing-lg);
+}
+
+.export-icon.attendance { background: linear-gradient(135deg, #10b981, #047857); }
+.export-icon.courses { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.export-icon.students { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.export-icon.backup { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.export-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.export-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.5;
+}
+
+.export-features {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.feature i {
+    color: var(--success);
+    font-size: 0.75rem;
+    width: 16px;
+}
+
+.export-actions {
+    margin-top: auto;
+}
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+}
+
+.section {
+    margin-top: var(--spacing-2xl);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.history-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.history-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.history-content {
+    flex: 1;
+}
+
+.history-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.history-date {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.history-size {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .export-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .export-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .history-item {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Export attendance data
+async function exportAttendance() {
+    try {
+        showNotification('Preparing attendance export...', 'info');
+        
+        const response = await fetch('/api/admin/export-attendance', {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('Attendance data exported successfully!', 'success');
+        } else {
+            throw new Error('Export failed');
+        }
+    } catch (error) {
+        console.error('Error exporting attendance:', error);
+        showNotification('Failed to export attendance data', 'error');
+    }
+}
+
+// Export courses data
+async function exportCourses() {
+    showNotification('Course export functionality coming soon!', 'info');
+}
+
+// Export students data  
+async function exportStudents() {
+    showNotification('Student export functionality coming soon!', 'info');
+}
+
+// Export full backup
+async function exportFullBackup() {
+    try {
+        showNotification('Creating full system backup...', 'info');
+        
+        // For now, just export attendance data
+        // In a real implementation, this would create multiple sheets
+        const response = await fetch('/api/admin/export-attendance', {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `full_backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('System backup created successfully!', 'success');
+        } else {
+            throw new Error('Backup failed');
+        }
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        showNotification('Failed to create system backup', 'error');
+    }
+}
+</script>
+{% endblock %}

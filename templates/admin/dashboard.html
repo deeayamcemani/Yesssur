@@ -1,0 +1,1064 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    {{ user.full_name.split()[0][0] }}{{ user.full_name.split()[1][0] if user.full_name.split()|length > 1 else '' }}
+                </div>
+                <div class="user-info">
+                    <h3>{{ user.full_name }}</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link active">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Dashboard Overview</h1>
+                <p class="page-subtitle">Welcome back, {{ user.full_name.split()[0] }}! Here's what's happening today.</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon students">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ total_students }}</div>
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +5 this month
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon courses">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ total_courses }}</div>
+                        <div class="stat-label">Active Courses</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus"></i>
+                            No change
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon sessions">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ today_sessions|length }}</div>
+                        <div class="stat-label">Today's Classes</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-calendar"></i>
+                            {{ today_sessions|length }} scheduled
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon attendance">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">87%</div>
+                        <div class="stat-label">Avg Attendance</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +3% from last week
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <h2 class="section-title">Quick Actions</h2>
+                <div class="action-cards">
+                    <div class="action-card" onclick="openModal('create-course-modal')">
+                        <div class="action-icon">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <div class="action-content">
+                            <h3>Create Course</h3>
+                            <p>Add a new course to the system</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-card" onclick="openModal('schedule-class-modal')">
+                        <div class="action-icon">
+                            <i class="fas fa-calendar-plus"></i>
+                        </div>
+                        <div class="action-content">
+                            <h3>Schedule Class</h3>
+                            <p>Add a new class session</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-card" onclick="exportAttendance()">
+                        <div class="action-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="action-content">
+                            <h3>Export Data</h3>
+                            <p>Download attendance reports</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-card" onclick="window.location.href='{{ url_for('admin_students') }}'">
+                        <div class="action-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="action-content">
+                            <h3>View Students</h3>
+                            <p>Manage student accounts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Classes -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Today's Classes</h2>
+                    <button class="btn btn-secondary" onclick="window.location.href='{{ url_for('admin_schedule') }}'">
+                        <i class="fas fa-calendar"></i>
+                        View Full Schedule
+                    </button>
+                </div>
+                
+                {% if today_sessions %}
+                <div class="today-classes">
+                    {% for session in today_sessions %}
+                    <div class="class-card" data-session-id="{{ session.id }}">
+                        <div class="class-time">
+                            <div class="time-slot">
+                                {{ session.start_time.strftime('%I:%M %p') }}
+                            </div>
+                            <div class="duration">
+                                {{ ((session.end_time.hour * 60 + session.end_time.minute) - (session.start_time.hour * 60 + session.start_time.minute)) // 60 }}h {{ ((session.end_time.hour * 60 + session.end_time.minute) - (session.start_time.hour * 60 + session.start_time.minute)) % 60 }}m
+                            </div>
+                        </div>
+                        
+                        <div class="class-info">
+                            <div class="class-header">
+                                <h3>{{ session.course.course_title }}</h3>
+                                <span class="course-code">{{ session.course.course_code }}</span>
+                            </div>
+                            <p class="lecturer">{{ session.course.lecturer_name }}</p>
+                            <div class="class-meta">
+                                {% if session.location %}
+                                <span class="location">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    {{ session.location }}
+                                </span>
+                                {% endif %}
+                                <span class="enrollment-count">
+                                    <i class="fas fa-users"></i>
+                                    {{ session.course.get_enrollment_count() }} students
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="class-status">
+                            <span class="status-badge status-{{ session.status }}">
+                                {{ session.status.title() }}
+                            </span>
+                            {% if session.is_active() %}
+                            <button class="btn btn-primary btn-sm" onclick="viewLiveAttendance({{ session.id }})">
+                                <i class="fas fa-eye"></i>
+                                Live View
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>No classes scheduled for today</h3>
+                    <p>Schedule a new class session to get started.</p>
+                    <button class="btn btn-primary" onclick="openModal('schedule-class-modal')">
+                        <i class="fas fa-plus"></i>
+                        Schedule Class
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="section">
+                <h2 class="section-title">Recent Attendance</h2>
+                {% if recent_records %}
+                <div class="activity-feed">
+                    {% for record in recent_records %}
+                    <div class="activity-item">
+                        <div class="activity-avatar">
+                            {{ record.user.full_name.split()[0][0] }}{{ record.user.full_name.split()[1][0] if record.user.full_name.split()|length > 1 else '' }}
+                        </div>
+                        <div class="activity-content">
+                            <p class="activity-text">
+                                <strong>{{ record.user.full_name }}</strong> was marked 
+                                <span class="status-{{ record.status }}">{{ record.status }}</span> 
+                                in {{ record.course.course_code }}
+                            </p>
+                            <p class="activity-time">{{ record.timestamp.strftime('%I:%M %p on %b %d') }}</p>
+                        </div>
+                        <div class="activity-status">
+                            <i class="fas fa-{{ 'check' if record.status == 'present' else 'times' }} text-{{ 'success' if record.status == 'present' else 'error' }}"></i>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No recent attendance records</h3>
+                    <p>Attendance records will appear here once classes begin.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Course Modal -->
+<div id="create-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('create-course-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Course</h2>
+            <button class="modal-close" onclick="closeModal('create-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="create-course-form" onsubmit="handleCreateCourse(event)">
+                <div class="form-group">
+                    <label for="course_code">
+                        <i class="fas fa-code"></i>
+                        Course Code
+                    </label>
+                    <input type="text" id="course_code" name="course_code" 
+                           placeholder="e.g., CSC301" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="course_title">
+                        <i class="fas fa-book"></i>
+                        Course Title
+                    </label>
+                    <input type="text" id="course_title" name="course_title" 
+                           placeholder="e.g., Introduction to Computer Vision" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lecturer_name">
+                        <i class="fas fa-user-tie"></i>
+                        Lecturer Name
+                    </label>
+                    <input type="text" id="lecturer_name" name="lecturer_name" 
+                           placeholder="e.g., Dr. John Smith" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">
+                        <i class="fas fa-align-left"></i>
+                        Description (Optional)
+                    </label>
+                    <textarea id="description" name="description" rows="3"
+                              placeholder="Course description"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-course-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Create Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Class Modal -->
+<div id="schedule-class-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('schedule-class-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Schedule New Class</h2>
+            <button class="modal-close" onclick="closeModal('schedule-class-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="schedule-class-form" onsubmit="handleScheduleClass(event)">
+                <div class="form-group">
+                    <label for="class_course">
+                        <i class="fas fa-book"></i>
+                        Course
+                    </label>
+                    <select id="class_course" name="course_id" required>
+                        <option value="">Select a course</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="class_date">
+                            <i class="fas fa-calendar"></i>
+                            Date
+                        </label>
+                        <input type="date" id="class_date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="start_time">
+                            <i class="fas fa-clock"></i>
+                            Start Time
+                        </label>
+                        <input type="time" id="start_time" name="start_time" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_time">
+                            <i class="fas fa-clock"></i>
+                            End Time
+                        </label>
+                        <input type="time" id="end_time" name="end_time" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Location (Optional)
+                    </label>
+                    <input type="text" id="location" name="location" 
+                           placeholder="e.g., MPH 101">
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('schedule-class-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus"></i>
+                        Schedule Class
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Admin Layout */
+.admin-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.admin-avatar {
+    background: var(--accent-gradient);
+}
+
+.admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 85px;
+    width: 250px;
+    height: calc(100vh - 85px);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    padding: var(--spacing-lg);
+    z-index: 50;
+    transition: transform 0.3s ease;
+}
+
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.nav-link.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.nav-link i {
+    width: 20px;
+    text-align: center;
+}
+
+.admin-main {
+    margin-left: 250px;
+    min-height: calc(100vh - 85px);
+    background: var(--bg-primary);
+}
+
+.admin-content {
+    padding: var(--spacing-xl);
+}
+
+/* Stats Grid */
+.stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.students { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.stat-icon.courses { background: linear-gradient(135deg, #10b981, #047857); }
+.stat-icon.sessions { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.stat-icon.attendance { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-change {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.stat-change.positive { color: var(--success); }
+.stat-change.negative { color: var(--error); }
+.stat-change.neutral { color: var(--text-muted); }
+
+/* Quick Actions */
+.quick-actions {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.action-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.action-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.action-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--accent-gradient);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.action-content h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.action-content p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Section Styling */
+.section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Today's Classes */
+.today-classes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.class-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.class-card:hover {
+    border-color: var(--accent-primary);
+}
+
+.class-time {
+    text-align: center;
+    min-width: 80px;
+}
+
+.time-slot {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.duration {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+.class-info {
+    flex: 1;
+}
+
+.class-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.class-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.lecturer {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.class-meta {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.class-meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.class-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--spacing-sm);
+}
+
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-scheduled {
+    background: rgba(249, 115, 22, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.status-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-completed {
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+/* Activity Feed */
+.activity-feed {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.activity-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-text {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.activity-time {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.status-present { color: var(--success); font-weight: 600; }
+.status-absent { color: var(--error); font-weight: 600; }
+
+.text-success { color: var(--success); }
+.text-error { color: var(--error); }
+
+/* Form Styling */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .admin-main {
+        margin-left: 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+    
+    .action-cards {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-content {
+        padding: var(--spacing-lg);
+    }
+    
+    .class-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .class-status {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load courses for scheduling form
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/courses');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('class_course');
+            data.courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.id;
+                option.textContent = `${course.course_code} - ${course.course_title}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading courses:', error);
+    }
+});
+
+// Handle course creation
+async function handleCreateCourse(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    
+    try {
+        const response = await fetch('/api/admin/create-course', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`Course created successfully! Join code: ${result.join_code}`, 'success');
+            closeModal('create-course-modal');
+            form.reset();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Failed to create course');
+        }
+        
+    } catch (error) {
+        console.error('Error creating course:', error);
+        showNotification(error.message || 'Failed to create course', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Handle class scheduling
+async function handleScheduleClass(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validate times
+    if (data.start_time >= data.end_time) {
+        showNotification('End time must be after start time', 'error');
+        return;
+    }
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scheduling...';
+    
+    try {
+        const response = await fetch('/api/admin/schedule-class', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Class scheduled successfully!', 'success');
+            closeModal('schedule-class-modal');
+            form.reset();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            throw new Error(result.message || 'Failed to schedule class');
+        }
+        
+    } catch (error) {
+        console.error('Error scheduling class:', error);
+        showNotification(error.message || 'Failed to schedule class', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Export attendance data
+async function exportAttendance() {
+    try {
+        showNotification('Preparing export...', 'info');
+        
+        const response = await fetch('/api/admin/export-attendance', {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('Attendance data exported successfully!', 'success');
+        } else {
+            throw new Error('Export failed');
+        }
+    } catch (error) {
+        console.error('Error exporting attendance:', error);
+        showNotification('Failed to export attendance data', 'error');
+    }
+}
+
+// View live attendance for active session
+async function viewLiveAttendance(sessionId) {
+    try {
+        const response = await fetch(`/api/admin/session/${sessionId}/live-attendance`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Create a modal to show live attendance
+            const modalContent = `
+                <div class="modal-header">
+                    <h2>Live Attendance - ${data.course.course_code}</h2>
+                    <button class="modal-close" onclick="closeModal('live-attendance-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="attendance-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${data.present_count}</div>
+                            <div class="stat-label">Present</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.total_enrolled - data.present_count}</div>
+                            <div class="stat-label">Absent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${Math.round((data.present_count / data.total_enrolled) * 100)}%</div>
+                            <div class="stat-label">Attendance Rate</div>
+                        </div>
+                    </div>
+                    <div class="student-list">
+                        ${data.students.map(student => `
+                            <div class="student-item ${student.status}">
+                                <div class="student-avatar">
+                                    ${student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                </div>
+                                <div class="student-info">
+                                    <h4>${student.name}</h4>
+                                    <p>${student.matric_number}</p>
+                                </div>
+                                <div class="student-status">
+                                    <i class="fas fa-${student.status === 'present' ? 'check' : 'times'}"></i>
+                                    ${student.status.toUpperCase()}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // Create and show modal
+            let modal = document.getElementById('live-attendance-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'live-attendance-modal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-overlay" onclick="closeModal('live-attendance-modal')"></div>
+                    <div class="modal-content modal-large">${modalContent}</div>
+                `;
+                document.body.appendChild(modal);
+            } else {
+                modal.querySelector('.modal-content').innerHTML = modalContent;
+            }
+            
+            openModal('live-attendance-modal');
+        }
+    } catch (error) {
+        console.error('Error loading live attendance:', error);
+        showNotification('Failed to load live attendance', 'error');
+    }
+}
+
+// Set minimum date to today for scheduling
+document.getElementById('class_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

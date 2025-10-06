@@ -1,0 +1,1006 @@
+{% extends "admin/courses.html" %}
+
+{% block title %}Class Schedule - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    SA
+                </div>
+                <div class="user-info">
+                    <h3>System Administrator</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link active">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Class Schedule</h1>
+                    <p class="page-subtitle">Manage class sessions and timetable</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="openModal('make-announcement-modal')">
+                        <i class="fas fa-bullhorn"></i>
+                        Make Announcement
+                    </button>
+                    <button class="btn btn-primary" onclick="openModal('schedule-class-modal')">
+                        <i class="fas fa-plus"></i>
+                        Schedule Class
+                    </button>
+                </div>
+            </div>
+
+            <!-- Schedule Grid -->
+            <div class="schedule-container">
+                {% if sessions %}
+                <div class="schedule-grid">
+                    {% for session in sessions %}
+                    <div class="schedule-card" data-session-id="{{ session.id }}">
+                        <div class="schedule-header">
+                            <div class="schedule-date">
+                                {{ session.date.strftime('%b %d') }}
+                                <span class="day-name">{{ session.date.strftime('%a') }}</span>
+                            </div>
+                            <div class="schedule-time">
+                                {{ session.start_time.strftime('%I:%M %p') }}
+                            </div>
+                        </div>
+                        
+                        <div class="schedule-content">
+                            <div class="course-info">
+                                <div class="course-code">{{ session.course.course_code }}</div>
+                                <h3 class="course-title">{{ session.course.course_title }}</h3>
+                                <p class="course-lecturer">{{ session.course.lecturer_name }}</p>
+                            </div>
+                            
+                            {% if session.location %}
+                            <div class="schedule-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {{ session.location }}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="schedule-meta">
+                                <span class="duration">
+                                    <i class="fas fa-clock"></i>
+                                    {{ ((session.end_time.hour * 60 + session.end_time.minute) - (session.start_time.hour * 60 + session.start_time.minute)) // 60 }}h {{ ((session.end_time.hour * 60 + session.end_time.minute) - (session.start_time.hour * 60 + session.start_time.minute)) % 60 }}m
+                                </span>
+                                <span class="enrollment">
+                                    <i class="fas fa-users"></i>
+                                    {{ session.course.get_enrollment_count() }} students
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="schedule-footer">
+                            <span class="status-badge status-{{ session.status }}">
+                                {{ session.status.title() }}
+                            </span>
+                            <div class="schedule-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="editSession({{ session.id }})" title="Edit Session">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if session.is_active() %}
+                                <button class="btn btn-primary btn-sm" onclick="viewLiveAttendance({{ session.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-danger btn-sm" onclick="confirmDeleteSession({{ session.id }})" title="Delete Session">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-plus"></i>
+                    <h3>No classes scheduled</h3>
+                    <p>Schedule your first class session to get started.</p>
+                    <button class="btn btn-primary" onclick="openModal('schedule-class-modal')">
+                        <i class="fas fa-plus"></i>
+                        Schedule Class
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Class Modal -->
+<div id="schedule-class-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('schedule-class-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Schedule New Class</h2>
+            <button class="modal-close" onclick="closeModal('schedule-class-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="schedule-class-form" onsubmit="handleScheduleClass(event)">
+                <div class="form-group">
+                    <label for="class_course">
+                        <i class="fas fa-book"></i>
+                        Course
+                    </label>
+                    <select id="class_course" name="course_id" required>
+                        <option value="">Select a course</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="class_date">
+                            <i class="fas fa-calendar"></i>
+                            Date
+                        </label>
+                        <input type="date" id="class_date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="start_time">
+                            <i class="fas fa-clock"></i>
+                            Start Time
+                        </label>
+                        <input type="time" id="start_time" name="start_time" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_time">
+                            <i class="fas fa-clock"></i>
+                            End Time
+                        </label>
+                        <input type="time" id="end_time" name="end_time" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Location (Optional)
+                    </label>
+                    <input type="text" id="location" name="location" 
+                           placeholder="e.g., MPH 101">
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('schedule-class-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus"></i>
+                        Schedule Class
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Session Modal -->
+<div id="edit-session-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('edit-session-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Class Session</h2>
+            <button class="modal-close" onclick="closeModal('edit-session-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-session-form" onsubmit="handleEditSession(event)">
+                <input type="hidden" id="edit_session_id">
+                <div class="form-group">
+                    <label for="edit_course">
+                        <i class="fas fa-book"></i>
+                        Course
+                    </label>
+                    <select id="edit_course" name="course_id" required>
+                        <option value="">Select a course</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_date">
+                            <i class="fas fa-calendar"></i>
+                            Date
+                        </label>
+                        <input type="date" id="edit_date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_start_time">
+                            <i class="fas fa-clock"></i>
+                            Start Time
+                        </label>
+                        <input type="time" id="edit_start_time" name="start_time" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_end_time">
+                            <i class="fas fa-clock"></i>
+                            End Time
+                        </label>
+                        <input type="time" id="edit_end_time" name="end_time" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Location (Optional)
+                    </label>
+                    <input type="text" id="edit_location" name="location" 
+                           placeholder="e.g., MPH 101">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_status">
+                        <i class="fas fa-info-circle"></i>
+                        Status
+                    </label>
+                    <select id="edit_status" name="status" required>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('edit-session-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i>
+                        Update Session
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Make Announcement Modal -->
+<div id="make-announcement-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('make-announcement-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Make Announcement</h2>
+            <button class="modal-close" onclick="closeModal('make-announcement-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="make-announcement-form" onsubmit="handleMakeAnnouncement(event)">
+                <div class="form-group">
+                    <label for="announcement_title">
+                        <i class="fas fa-heading"></i>
+                        Title
+                    </label>
+                    <input type="text" id="announcement_title" name="title" required 
+                           placeholder="Announcement title">
+                </div>
+                
+                <div class="form-group">
+                    <label for="announcement_content">
+                        <i class="fas fa-align-left"></i>
+                        Content
+                    </label>
+                    <textarea id="announcement_content" name="content" rows="4" required 
+                              placeholder="Write your announcement here..."></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="announcement_course">
+                            <i class="fas fa-book"></i>
+                            Course (Optional)
+                        </label>
+                        <select id="announcement_course" name="course_id">
+                            <option value="">General Announcement</option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                        <small class="form-hint">Leave empty for general announcement to all students</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="announcement_priority">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Priority
+                        </label>
+                        <select id="announcement_priority" name="priority">
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('make-announcement-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-bullhorn"></i>
+                        Send Announcement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-session-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('delete-session-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+            <button class="modal-close" onclick="closeModal('delete-session-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-content">
+                <i class="fas fa-exclamation-triangle warning-icon"></i>
+                <p>Are you sure you want to delete this class session?</p>
+                <p class="warning-text">This action cannot be undone and will remove:</p>
+                <ul class="warning-list">
+                    <li>The scheduled class session</li>
+                    <li>All associated attendance records</li>
+                </ul>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('delete-session-modal')">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteSessionBtn" onclick="deleteSession()">
+                    <i class="fas fa-trash"></i>
+                    Delete Session
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+.schedule-container {
+    margin-top: var(--spacing-lg);
+}
+
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.schedule-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.schedule-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.schedule-header {
+    background: var(--bg-tertiary);
+    padding: var(--spacing-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-date {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.day-name {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.schedule-time {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.schedule-content {
+    padding: var(--spacing-lg);
+}
+
+.course-code {
+    background: var(--accent-gradient);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: var(--spacing-md);
+}
+
+.course-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
+}
+
+.course-lecturer {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.schedule-location {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.schedule-meta {
+    display: flex;
+    gap: var(--spacing-lg);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.schedule-meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.schedule-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.schedule-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.status-scheduled {
+    background: rgba(249, 115, 22, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.status-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-completed {
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-lg);
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.empty-state p {
+    margin-bottom: var(--spacing-lg);
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.form-hint {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: var(--spacing-xs);
+    display: block;
+}
+
+.warning-content {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.warning-icon {
+    font-size: 3rem;
+    color: var(--warning);
+    margin-bottom: var(--spacing-md);
+}
+
+.warning-text {
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0;
+}
+
+.warning-list {
+    text-align: left;
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.warning-list li {
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .schedule-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .schedule-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .schedule-footer {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load courses for forms
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/courses');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Populate schedule class form
+            const scheduleSelect = document.getElementById('class_course');
+            const editSelect = document.getElementById('edit_course');
+            const announcementSelect = document.getElementById('announcement_course');
+            
+            data.courses.forEach(course => {
+                // Schedule form
+                const scheduleOption = document.createElement('option');
+                scheduleOption.value = course.id;
+                scheduleOption.textContent = `${course.course_code} - ${course.course_title}`;
+                scheduleSelect.appendChild(scheduleOption);
+                
+                // Edit form
+                const editOption = document.createElement('option');
+                editOption.value = course.id;
+                editOption.textContent = `${course.course_code} - ${course.course_title}`;
+                editSelect.appendChild(editOption);
+                
+                // Announcement form
+                const announcementOption = document.createElement('option');
+                announcementOption.value = course.id;
+                announcementOption.textContent = `${course.course_code} - ${course.course_title}`;
+                announcementSelect.appendChild(announcementOption);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading courses:', error);
+    }
+});
+
+// Handle class scheduling
+async function handleScheduleClass(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validate times
+    if (data.start_time >= data.end_time) {
+        showNotification('End time must be after start time', 'error');
+        return;
+    }
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scheduling...';
+    
+    try {
+        const response = await fetch('/api/admin/schedule-class', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Class scheduled successfully!', 'success');
+            closeModal('schedule-class-modal');
+            form.reset();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            throw new Error(result.message || 'Failed to schedule class');
+        }
+        
+    } catch (error) {
+        console.error('Error scheduling class:', error);
+        showNotification(error.message || 'Failed to schedule class', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Edit session
+async function editSession(sessionId) {
+    try {
+        const response = await fetch(`/api/class-sessions/${sessionId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const session = result.session;
+            
+            // Populate edit form
+            document.getElementById('edit_session_id').value = session.id;
+            document.getElementById('edit_course').value = session.course_id;
+            document.getElementById('edit_date').value = session.date;
+            document.getElementById('edit_start_time').value = session.start_time;
+            document.getElementById('edit_end_time').value = session.end_time;
+            document.getElementById('edit_location').value = session.location || '';
+            document.getElementById('edit_status').value = session.status;
+            
+            openModal('edit-session-modal');
+        } else {
+            throw new Error(result.message || 'Failed to load session data');
+        }
+    } catch (error) {
+        console.error('Error loading session for edit:', error);
+        showNotification(error.message || 'Failed to load session data', 'error');
+    }
+}
+
+// Handle edit session form submission
+async function handleEditSession(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const sessionId = document.getElementById('edit_session_id').value;
+    
+    // Validate times
+    if (data.start_time >= data.end_time) {
+        showNotification('End time must be after start time', 'error');
+        return;
+    }
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    
+    try {
+        const response = await fetch(`/api/class-sessions/${sessionId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Session updated successfully!', 'success');
+            closeModal('edit-session-modal');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            throw new Error(result.message || 'Failed to update session');
+        }
+        
+    } catch (error) {
+        console.error('Error updating session:', error);
+        showNotification(error.message || 'Failed to update session', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Confirm delete session
+let currentSessionId = null;
+function confirmDeleteSession(sessionId) {
+    currentSessionId = sessionId;
+    openModal('delete-session-modal');
+}
+
+// Delete session
+async function deleteSession() {
+    if (!currentSessionId) return;
+    
+    const submitBtn = document.getElementById('confirmDeleteSessionBtn');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    
+    try {
+        const response = await fetch(`/api/class-sessions/${currentSessionId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Session deleted successfully!', 'success');
+            closeModal('delete-session-modal');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            throw new Error(result.message || 'Failed to delete session');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        showNotification(error.message || 'Failed to delete session', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Handle make announcement
+async function handleMakeAnnouncement(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Convert empty course_id to null
+    if (!data.course_id) {
+        data.course_id = null;
+    }
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    
+    try {
+        const response = await fetch('/api/announcements', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Announcement sent successfully!', 'success');
+            closeModal('make-announcement-modal');
+            form.reset();
+        } else {
+            throw new Error(result.message || 'Failed to send announcement');
+        }
+        
+    } catch (error) {
+        console.error('Error sending announcement:', error);
+        showNotification(error.message || 'Failed to send announcement', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// View live attendance (same function as dashboard)
+async function viewLiveAttendance(sessionId) {
+    try {
+        const response = await fetch(`/api/admin/session/${sessionId}/live-attendance`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const modalContent = `
+                <div class="modal-header">
+                    <h2>Live Attendance - ${data.course.course_code}</h2>
+                    <button class="modal-close" onclick="closeModal('live-attendance-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="attendance-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${data.present_count}</div>
+                            <div class="stat-label">Present</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.total_enrolled - data.present_count}</div>
+                            <div class="stat-label">Absent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${Math.round((data.present_count / data.total_enrolled) * 100)}%</div>
+                            <div class="stat-label">Attendance Rate</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            let modal = document.getElementById('live-attendance-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'live-attendance-modal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-overlay" onclick="closeModal('live-attendance-modal')"></div>
+                    <div class="modal-content modal-large">${modalContent}</div>
+                `;
+                document.body.appendChild(modal);
+            } else {
+                modal.querySelector('.modal-content').innerHTML = modalContent;
+            }
+            
+            openModal('live-attendance-modal');
+        }
+    } catch (error) {
+        console.error('Error loading live attendance:', error);
+        showNotification('Failed to load live attendance', 'error');
+    }
+}
+
+// Set minimum date to today for scheduling
+document.getElementById('class_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

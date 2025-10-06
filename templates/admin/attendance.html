@@ -1,0 +1,1004 @@
+{% extends "admin/courses.html" %}
+
+{% block title %}Attendance Reports - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('admin_dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+                <div class="admin-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    Admin
+                </div>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar admin-avatar">
+                    SA
+                </div>
+                <div class="user-info">
+                    <h3>System Administrator</h3>
+                    <p>Administrator</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Sidebar -->
+    <div class="admin-sidebar">
+        <nav class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin_courses') }}" class="nav-link">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('admin_students') }}" class="nav-link">
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </a>
+            <a href="{{ url_for('admin_schedule') }}" class="nav-link">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Schedule</span>
+            </a>
+            <a href="{{ url_for('admin_attendance') }}" class="nav-link active">
+                <i class="fas fa-chart-bar"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="{{ url_for('admin_exports') }}" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+        <div class="admin-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Attendance Reports</h1>
+                    <p class="page-subtitle">View and analyze attendance records</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-success" onclick="exportFilteredAttendance()">
+                        <i class="fas fa-download"></i>
+                        Export Filtered
+                    </button>
+                    <button class="btn btn-primary" onclick="exportAllAttendance()">
+                        <i class="fas fa-download"></i>
+                        Export All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filterCourse">
+                            <i class="fas fa-book"></i>
+                            Course
+                        </label>
+                        <select id="filterCourse" class="filter-select" onchange="applyFilters()">
+                            <option value="">All Courses</option>
+                            {% for course in courses %}
+                            <option value="{{ course.id }}">{{ course.course_code }} - {{ course.course_title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterStatus">
+                            <i class="fas fa-check-circle"></i>
+                            Status
+                        </label>
+                        <select id="filterStatus" class="filter-select" onchange="applyFilters()">
+                            <option value="">All Statuses</option>
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterDateFrom">
+                            <i class="fas fa-calendar"></i>
+                            From Date
+                        </label>
+                        <input type="date" id="filterDateFrom" class="filter-input" onchange="applyFilters()">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterDateTo">
+                            <i class="fas fa-calendar-check"></i>
+                            To Date
+                        </label>
+                        <input type="date" id="filterDateTo" class="filter-input" onchange="applyFilters()">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="searchStudent">
+                            <i class="fas fa-search"></i>
+                            Student
+                        </label>
+                        <input type="text" id="searchStudent" class="filter-input" placeholder="Search student..." onkeyup="applyFilters()">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <button class="btn btn-secondary" onclick="clearFilters()">
+                            <i class="fas fa-undo"></i>
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Summary Stats -->
+                <div class="attendance-summary" id="attendanceSummary">
+                    <div class="summary-card">
+                        <div class="summary-icon present">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="summary-info">
+                            <div class="summary-value" id="presentCount">{{ present_count or 0 }}</div>
+                            <div class="summary-label">Present</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon absent">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="summary-info">
+                            <div class="summary-value" id="absentCount">{{ absent_count or 0 }}</div>
+                            <div class="summary-label">Absent</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon rate">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="summary-info">
+                            <div class="summary-value" id="attendanceRate">{{ attendance_rate or 0 }}%</div>
+                            <div class="summary-label">Rate</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon total">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="summary-info">
+                            <div class="summary-value" id="totalRecords">{{ records|length }}</div>
+                            <div class="summary-label">Total Records</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Records Table -->
+            <div class="table-container">
+                <div class="table-actions">
+                    <div class="results-info">
+                        <span id="resultsCount">Showing {{ records|length }} records</span>
+                    </div>
+                    <div class="table-controls">
+                        <button class="btn btn-sm btn-secondary" onclick="selectAllVisible()">
+                            <i class="fas fa-check-square"></i>
+                            Select All Visible
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="bulkUpdateAttendance()">
+                            <i class="fas fa-edit"></i>
+                            Bulk Update
+                        </button>
+                    </div>
+                </div>
+                <table class="data-table" id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                            </th>
+                            <th onclick="sortTable('date')" class="sortable">
+                                Date <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('course')" class="sortable">
+                                Course <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('student')" class="sortable">
+                                Student <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('status')" class="sortable">
+                                Status <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('time')" class="sortable">
+                                Time Marked <i class="fas fa-sort"></i>
+                            </th>
+                            <th>Marked By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        {% for record in records %}
+                        <tr class="attendance-row" 
+                            data-course-id="{{ record.class_session.course_id }}" 
+                            data-course-name="{{ record.class_session.course.course_title|lower }}" 
+                            data-student-name="{{ record.user.full_name|lower }}" 
+                            data-status="{{ record.status }}" 
+                            data-date="{{ record.class_session.date.isoformat() }}" 
+                            data-time="{{ record.timestamp.strftime('%H:%M') }}">
+                            <td>
+                                <input type="checkbox" class="record-checkbox" value="{{ record.id }}" onchange="updateBulkActions()">
+                            </td>
+                            <td>
+                                <div class="date-info">
+                                    <div class="date-main">{{ record.class_session.date.strftime('%b %d') }}</div>
+                                    <div class="date-year">{{ record.class_session.date.strftime('%Y') }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="course-info">
+                                    <div class="course-code">{{ record.class_session.course.course_code }}</div>
+                                    <div class="course-title">{{ record.class_session.course.course_title }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="student-info">
+                                    <div class="student-avatar">
+                                        {{ record.user.full_name.split()[0][0] }}{{ record.user.full_name.split()[1][0] if record.user.full_name.split()|length > 1 else '' }}
+                                    </div>
+                                    <div class="student-details">
+                                        <div class="student-name">{{ record.user.full_name }}</div>
+                                        <div class="student-matric">{{ record.user.matric_number }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ record.status }}" onclick="toggleAttendanceStatus({{ record.id }})" style="cursor: pointer;">
+                                    <i class="fas fa-{{ 'check' if record.status == 'present' else 'times' }}"></i>
+                                    {{ record.status.title() }}
+                                </span>
+                            </td>
+                            <td>{{ record.timestamp.strftime('%I:%M %p') }}</td>
+                            <td>
+                                <span class="badge badge-{{ record.marked_by }}">
+                                    <i class="fas fa-{{ 'user' if record.marked_by == 'student' else 'user-shield' if record.marked_by == 'admin' else 'cog' }}"></i>
+                                    {{ record.marked_by.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-warning btn-sm" onclick="editAttendanceRecord({{ record.id }})" title="Edit Record">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteAttendanceRecord({{ record.id }})" title="Delete Record">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="empty-cell">
+                                <div class="empty-state">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <h3>No attendance records found</h3>
+                                    <p>No attendance records match your current filters. Try adjusting the filters above.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+.date-info {
+    text-align: center;
+}
+
+.date-main {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.date-year {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.course-info {
+    min-width: 200px;
+}
+
+.course-code {
+    background: var(--accent-gradient);
+    color: white;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.course-title {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-width: 180px;
+}
+
+.student-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.student-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    margin-bottom: 2px;
+}
+
+.student-matric {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.status-present {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-absent {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-student {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-admin {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.badge-system {
+    background: rgba(107, 114, 128, 0.1);
+    color: var(--text-muted);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.filters-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.filter-group label i {
+    color: var(--accent-primary);
+}
+
+.filter-select,
+.filter-input {
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.attendance-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.summary-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+}
+
+.summary-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.summary-icon.present {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.summary-icon.absent {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.summary-icon.rate {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+}
+
+.summary-icon.total {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-primary);
+}
+
+.summary-info {
+    flex: 1;
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: var(--spacing-xs);
+}
+
+.summary-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.table-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.results-info {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.table-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.sortable {
+    cursor: pointer;
+    transition: background 0.2s ease;
+    position: relative;
+}
+
+.sortable:hover {
+    background: var(--bg-tertiary);
+}
+
+.sortable i {
+    margin-left: var(--spacing-xs);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.record-checkbox {
+    transform: scale(1.1);
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.status-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .student-info {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .course-info {
+        min-width: auto;
+    }
+    
+    .data-table {
+        font-size: 0.8rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: var(--spacing-sm);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSortColumn = null;
+let currentSortDirection = 'asc';
+let allRecords = [];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Store all records for filtering
+    allRecords = Array.from(document.querySelectorAll('.attendance-row'));
+    updateSummaryStats();
+});
+
+// Apply all filters
+function applyFilters() {
+    const courseFilter = document.getElementById('filterCourse').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    const dateFromFilter = document.getElementById('filterDateFrom').value;
+    const dateToFilter = document.getElementById('filterDateTo').value;
+    const studentSearch = document.getElementById('searchStudent').value.toLowerCase();
+    
+    let visibleCount = 0;
+    
+    allRecords.forEach(row => {
+        let visible = true;
+        
+        // Course filter
+        if (courseFilter && row.getAttribute('data-course-id') !== courseFilter) {
+            visible = false;
+        }
+        
+        // Status filter
+        if (statusFilter && row.getAttribute('data-status') !== statusFilter) {
+            visible = false;
+        }
+        
+        // Date range filter
+        if (dateFromFilter || dateToFilter) {
+            const recordDate = new Date(row.getAttribute('data-date'));
+            if (dateFromFilter && recordDate < new Date(dateFromFilter)) {
+                visible = false;
+            }
+            if (dateToFilter && recordDate > new Date(dateToFilter)) {
+                visible = false;
+            }
+        }
+        
+        // Student search
+        if (studentSearch && !row.getAttribute('data-student-name').includes(studentSearch)) {
+            visible = false;
+        }
+        
+        if (visible) {
+            row.style.display = 'table-row';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update results count
+    document.getElementById('resultsCount').textContent = `Showing ${visibleCount} records`;
+    
+    // Update summary stats based on visible records
+    updateSummaryStats();
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('filterCourse').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('searchStudent').value = '';
+    
+    // Show all records
+    allRecords.forEach(row => {
+        row.style.display = 'table-row';
+    });
+    
+    document.getElementById('resultsCount').textContent = `Showing ${allRecords.length} records`;
+    updateSummaryStats();
+}
+
+// Update summary statistics
+function updateSummaryStats() {
+    const visibleRows = Array.from(document.querySelectorAll('.attendance-row')).filter(row => 
+        row.style.display !== 'none'
+    );
+    
+    const presentCount = visibleRows.filter(row => 
+        row.getAttribute('data-status') === 'present'
+    ).length;
+    
+    const absentCount = visibleRows.filter(row => 
+        row.getAttribute('data-status') === 'absent'
+    ).length;
+    
+    const totalCount = visibleRows.length;
+    const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+    
+    document.getElementById('presentCount').textContent = presentCount;
+    document.getElementById('absentCount').textContent = absentCount;
+    document.getElementById('attendanceRate').textContent = attendanceRate + '%';
+    document.getElementById('totalRecords').textContent = totalCount;
+}
+
+// Sort table by column
+function sortTable(column) {
+    const tbody = document.getElementById('attendanceTableBody');
+    const rows = Array.from(tbody.querySelectorAll('.attendance-row'));
+    
+    // Toggle direction if same column
+    if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortDirection = 'asc';
+    }
+    
+    currentSortColumn = column;
+    
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch (column) {
+            case 'date':
+                aVal = new Date(a.getAttribute('data-date'));
+                bVal = new Date(b.getAttribute('data-date'));
+                break;
+            case 'course':
+                aVal = a.getAttribute('data-course-name');
+                bVal = b.getAttribute('data-course-name');
+                break;
+            case 'student':
+                aVal = a.getAttribute('data-student-name');
+                bVal = b.getAttribute('data-student-name');
+                break;
+            case 'status':
+                aVal = a.getAttribute('data-status');
+                bVal = b.getAttribute('data-status');
+                break;
+            case 'time':
+                aVal = a.getAttribute('data-time');
+                bVal = b.getAttribute('data-time');
+                break;
+            default:
+                return 0;
+        }
+        
+        if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort indicators
+    document.querySelectorAll('.sortable i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+    });
+    
+    const currentHeader = document.querySelector(`th[onclick="sortTable('${column}')"] i`);
+    if (currentHeader) {
+        currentHeader.className = `fas fa-sort-${currentSortDirection === 'asc' ? 'up' : 'down'}`;
+    }
+}
+
+// Toggle select all checkboxes
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const recordCheckboxes = document.querySelectorAll('.record-checkbox');
+    
+    recordCheckboxes.forEach(checkbox => {
+        if (checkbox.closest('tr').style.display !== 'none') {
+            checkbox.checked = selectAllCheckbox.checked;
+        }
+    });
+    
+    updateBulkActions();
+}
+
+// Select all visible records
+function selectAllVisible() {
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.record-checkbox'))
+        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
+    
+    const allChecked = visibleCheckboxes.every(checkbox => checkbox.checked);
+    
+    visibleCheckboxes.forEach(checkbox => {
+        checkbox.checked = !allChecked;
+    });
+    
+    updateBulkActions();
+}
+
+// Update bulk action buttons
+function updateBulkActions() {
+    const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+    const bulkButton = document.querySelector('[onclick="bulkUpdateAttendance()"]');
+    
+    if (checkedBoxes.length > 0) {
+        bulkButton.textContent = `Bulk Update (${checkedBoxes.length})`;
+        bulkButton.disabled = false;
+    } else {
+        bulkButton.innerHTML = '<i class="fas fa-edit"></i> Bulk Update';
+        bulkButton.disabled = true;
+    }
+}
+
+// Bulk update attendance
+function bulkUpdateAttendance() {
+    const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+    const recordIds = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+    
+    if (recordIds.length === 0) {
+        showNotification('Please select records to update', 'warning');
+        return;
+    }
+    
+    const newStatus = confirm('Mark selected records as Present? Click Cancel for Absent.') ? 'present' : 'absent';
+    
+    // API call to update records
+    fetch('/api/attendance/bulk-update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            record_ids: recordIds,
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Updated ${recordIds.length} records to ${newStatus}`, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Error updating records: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating attendance:', error);
+        showNotification('Failed to update attendance records', 'error');
+    });
+}
+
+// Toggle single attendance status
+function toggleAttendanceStatus(recordId) {
+    fetch(`/api/attendance/${recordId}/toggle`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Attendance updated to ${data.new_status}`, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Error updating attendance: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling attendance:', error);
+        showNotification('Failed to update attendance', 'error');
+    });
+}
+
+// Edit attendance record
+function editAttendanceRecord(recordId) {
+    showNotification('Edit attendance functionality coming soon!', 'info');
+}
+
+// Delete attendance record
+function deleteAttendanceRecord(recordId) {
+    if (confirm('Are you sure you want to delete this attendance record? This action cannot be undone.')) {
+        fetch(`/api/attendance/${recordId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Attendance record deleted successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error deleting record: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting attendance:', error);
+            showNotification('Failed to delete attendance record', 'error');
+        });
+    }
+}
+
+// Export filtered attendance data
+async function exportFilteredAttendance() {
+    try {
+        showNotification('Preparing filtered export...', 'info');
+        
+        // Get current filter values
+        const filters = {
+            course_id: document.getElementById('filterCourse').value,
+            status: document.getElementById('filterStatus').value,
+            date_from: document.getElementById('filterDateFrom').value,
+            date_to: document.getElementById('filterDateTo').value,
+            student_search: document.getElementById('searchStudent').value
+        };
+        
+        // Remove empty filters
+        Object.keys(filters).forEach(key => {
+            if (!filters[key]) delete filters[key];
+        });
+        
+        const queryString = new URLSearchParams(filters).toString();
+        const response = await fetch(`/api/admin/export-attendance?${queryString}`, {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_filtered_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('Filtered attendance data exported successfully!', 'success');
+        } else {
+            throw new Error('Export failed');
+        }
+    } catch (error) {
+        console.error('Error exporting filtered attendance:', error);
+        showNotification('Failed to export filtered attendance data', 'error');
+    }
+}
+
+// Export all attendance data
+async function exportAllAttendance() {
+    try {
+        showNotification('Preparing complete export...', 'info');
+        
+        const response = await fetch('/api/admin/export-attendance', {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_complete_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification('Complete attendance data exported successfully!', 'success');
+        } else {
+            throw new Error('Export failed');
+        }
+    } catch (error) {
+        console.error('Error exporting all attendance:', error);
+        showNotification('Failed to export attendance data', 'error');
+    }
+}
+
+// Legacy function for compatibility
+function exportAttendance() {
+    exportAllAttendance();
+}
+</script>
+{% endblock %}

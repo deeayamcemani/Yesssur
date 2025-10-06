@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block title %}Courses - CS Present{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Header -->
+    <div class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="{{ url_for('dashboard') }}" class="header-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>CS Present</span>
+                </a>
+            </div>
+            
+            <div class="header-user">
+                <div class="user-avatar">
+                    {{ user.full_name.split()[0][0] }}{{ user.full_name.split()[1][0] if user.full_name.split()|length > 1 else '' }}
+                </div>
+                <div class="user-info">
+                    <h3>{{ user.full_name }}</h3>
+                    <p>Student</p>
+                </div>
+                <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">Hello {{ user.full_name.split()[0] }} 👋</h1>
+            <p class="page-subtitle">Manage your courses and attendance</p>
+        </div>
+
+        <!-- Action Section -->
+        <div class="action-section">
+            <button class="btn btn-primary" onclick="openModal('add-course-modal')">
+                <i class="fas fa-plus"></i>
+                Add Course
+            </button>
+            
+            <div class="course-filters">
+                <button class="filter-btn active" onclick="filterCourses('all')" data-filter="all">
+                    All Courses
+                </button>
+                <button class="filter-btn" onclick="filterCourses('csc')" data-filter="csc">
+                    CSC
+                </button>
+                <button class="filter-btn" onclick="filterCourses('gst')" data-filter="gst">
+                    GST
+                </button>
+            </div>
+        </div>
+
+        <!-- Today's Courses -->
+        {% if today_sessions %}
+        <div class="section">
+            <h2 class="section-title">Today's Courses</h2>
+            <div class="today-courses">
+                {% for session in today_sessions %}
+                <div class="today-course-item" 
+                     data-session-id="{{ session.id }}"
+                     data-start-time="{{ session.start_time }}"
+                     data-end-time="{{ session.end_time }}"
+                     data-session-date="{{ session.date }}">
+                    <div class="course-info">
+                        <div class="course-header">
+                            <span class="course-code">{{ session.course.course_code }}</span>
+                            <span class="course-status status-{{ 'active' if session.is_active() else 'upcoming' }}">
+                                {{ 'Active' if session.is_active() else 'Upcoming' }}
+                            </span>
+                        </div>
+                        <h3 class="course-title">{{ session.course.course_title }}</h3>
+                        <p class="course-lecturer">{{ session.course.lecturer_name }}</p>
+                        <div class="course-time">
+                            <i class="fas fa-clock"></i>
+                            {{ session.start_time.strftime('%I:%M %p') }} - {{ session.end_time.strftime('%I:%M %p') }}
+                        </div>
+                    </div>
+                    {% if session.is_active() %}
+                    <div class="course-actions">
+                        <button class="btn btn-primary attendance-btn animate-pulse" 
+                                onclick="markAttendance({{ session.id }})">
+                            <i class="fas fa-user-check"></i>
+                            I Am Present
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- All Courses -->
+        <div class="section">
+            <h2 class="section-title">All Courses</h2>
+            {% if enrolled_courses %}
+            <div class="course-grid">
+                {% for course in enrolled_courses %}
+                <div class="course-card" data-course-code="{{ course.course_code.lower() }}">
+                    <div class="course-cover">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="course-info">
+                        <div class="course-code">{{ course.course_code }}</div>
+                        <h3 class="course-title">{{ course.course_title }}</h3>
+                        <p class="course-lecturer">{{ course.lecturer_name }}</p>
+                        <div class="course-stats">
+                            <div class="attendance-percentage">
+                                {{ course.get_attendance_percentage(user.id) }}%
+                            </div>
+                            <div class="course-actions">
+                                <button class="btn btn-secondary btn-sm" 
+                                        onclick="window.location.href='/course/{{ course.id }}'">
+                                    <i class="fas fa-chart-line"></i>
+                                    View History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-book-open"></i>
+                <h3>No courses enrolled</h3>
+                <p>Join your first course to get started with attendance tracking.</p>
+                <button class="btn btn-primary" onclick="openModal('add-course-modal')">
+                    <i class="fas fa-plus"></i>
+                    Add Course
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-content">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('courses') }}" class="nav-item active">
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </a>
+            <a href="{{ url_for('announcements') }}" class="nav-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Add Course Modal -->
+<div id="add-course-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('add-course-modal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Join a Course</h2>
+            <button class="modal-close" onclick="closeModal('add-course-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="join-course-form" onsubmit="handleJoinCourse(event)">
+                <div class="form-group">
+                    <label for="course_code">
+                        <i class="fas fa-key"></i>
+                        Course Join Code
+                    </label>
+                    <input type="text" 
+                           id="course_code" 
+                           name="course_code" 
+                           placeholder="Enter the course join code"
+                           required>
+                    <small class="form-hint">Get the join code from your lecturer</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('add-course-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Join Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Course Details Modal -->
+<div id="course-details-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeModal('course-details-modal')"></div>
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2 id="course-details-title">Course Details</h2>
+            <button class="modal-close" onclick="closeModal('course-details-modal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="course-details-body">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                Loading course details...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.action-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.course-filters {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.filter-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+.filter-btn.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.today-courses {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.today-course-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.today-course-item:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.course-time {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-top: var(--spacing-sm);
+}
+
+.btn-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+}
+
+.modal-large {
+    max-width: 800px;
+}
+
+.loading {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+.loading i {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--accent-primary);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .action-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .course-filters {
+        justify-content: center;
+    }
+    
+    .today-course-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+    
+    .course-actions {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle course joining
+async function handleJoinCourse(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const courseCode = form.course_code.value.trim();
+    
+    if (!courseCode) {
+        showNotification('Please enter a course code', 'error');
+        return;
+    }
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalContent = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining...';
+    
+    try {
+        const response = await fetch('/api/join-course', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ course_code: courseCode })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Successfully joined course!', 'success');
+            closeModal('add-course-modal');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            throw new Error(data.message || 'Failed to join course');
+        }
+        
+    } catch (error) {
+        console.error('Error joining course:', error);
+        showNotification(error.message || 'Failed to join course. Please check the code.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Filter courses
+function filterCourses(filter) {
+    const courses = document.querySelectorAll('.course-card');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    
+    // Update active filter button
+    filterBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+    });
+    
+    // Filter courses
+    courses.forEach(course => {
+        const courseCode = course.getAttribute('data-course-code');
+        
+        if (filter === 'all' || courseCode.includes(filter)) {
+            course.style.display = 'block';
+            course.classList.add('animate-fade-in');
+        } else {
+            course.style.display = 'none';
+        }
+    });
+}
+
+// View course details
+async function viewCourseDetails(courseId) {
+    const modal = document.getElementById('course-details-modal');
+    const title = document.getElementById('course-details-title');
+    const body = document.getElementById('course-details-body');
+    
+    // Show loading
+    title.textContent = 'Loading...';
+    body.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i>Loading course details...</div>';
+    
+    openModal('course-details-modal');
+    
+    try {
+        const response = await fetch(`/api/course/${courseId}/details`);
+        const data = await response.json();
+        
+        if (data.success) {
+            title.textContent = `${data.course.course_code} - ${data.course.course_title}`;
+            
+            let attendanceHistory = '';
+            if (data.attendance && data.attendance.length > 0) {
+                attendanceHistory = data.attendance.map(record => `
+                    <div class="attendance-record">
+                        <div class="record-date">${formatDate(record.date)}</div>
+                        <div class="record-status ${record.status}">${record.status.toUpperCase()}</div>
+                    </div>
+                `).join('');
+            } else {
+                attendanceHistory = '<p class="text-muted">No attendance records yet.</p>';
+            }
+            
+            body.innerHTML = `
+                <div class="course-details-content">
+                    <div class="course-overview">
+                        <h3>Course Overview</h3>
+                        <p><strong>Lecturer:</strong> ${data.course.lecturer_name}</p>
+                        <p><strong>Attendance:</strong> ${data.attendance_percentage}%</p>
+                        <p><strong>Total Classes:</strong> ${data.total_classes}</p>
+                        <p><strong>Classes Attended:</strong> ${data.classes_attended}</p>
+                    </div>
+                    
+                    <div class="attendance-history">
+                        <h3>Attendance History</h3>
+                        <div class="attendance-records">
+                            ${attendanceHistory}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            throw new Error(data.message || 'Failed to load course details');
+        }
+        
+    } catch (error) {
+        console.error('Error loading course details:', error);
+        body.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Failed to load course details. Please try again.</p>
+            </div>
+        `;
+    }
+}
+
+// Real-time updates
+document.addEventListener('DOMContentLoaded', function() {
+    // Update today's session statuses
+    updateAllSessionStatuses();
+    setInterval(updateAllSessionStatuses, 60000);
+});
+
+function updateAllSessionStatuses() {
+    const sessionItems = document.querySelectorAll('[data-session-id]');
+    
+    sessionItems.forEach(item => {
+        const sessionDate = item.getAttribute('data-session-date');
+        const startTime = item.getAttribute('data-start-time');
+        const endTime = item.getAttribute('data-end-time');
+        
+        if (sessionDate && startTime && endTime) {
+            const now = new Date();
+            const sessionStart = new Date(`${sessionDate}T${startTime}`);
+            const sessionEnd = new Date(`${sessionDate}T${endTime}`);
+            
+            const statusElement = item.querySelector('.course-status');
+            const attendanceBtn = item.querySelector('.attendance-btn');
+            
+            if (now >= sessionStart && now <= sessionEnd) {
+                // Session is active
+                if (statusElement) {
+                    statusElement.className = 'course-status status-active';
+                    statusElement.textContent = 'Active';
+                }
+                if (attendanceBtn) {
+                    attendanceBtn.style.display = 'block';
+                    attendanceBtn.classList.add('animate-pulse');
+                }
+            } else if (now > sessionEnd) {
+                // Session has ended
+                if (statusElement) {
+                    statusElement.className = 'course-status status-completed';
+                    statusElement.textContent = 'Completed';
+                }
+                if (attendanceBtn) {
+                    attendanceBtn.style.display = 'none';
+                    attendanceBtn.classList.remove('animate-pulse');
+                }
+            } else {
+                // Session is upcoming
+                if (statusElement) {
+                    statusElement.className = 'course-status status-upcoming';
+                    statusElement.textContent = 'Upcoming';
+                }
+                if (attendanceBtn) {
+                    attendanceBtn.style.display = 'none';
+                    attendanceBtn.classList.remove('animate-pulse');
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
