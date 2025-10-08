@@ -24,7 +24,6 @@ app.config["SECRET_KEY"] = secrets.token_hex(16)
 db_url = os.getenv("DATABASE_URL", "sqlite:///attendance.db")
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://attendance_db_so9v_user:vvqir6Wc3OoNu3uVIGGgW4cKs0TtjPyw@dpg-d3jd5sh5pdvs73ebt0dg-a.oregon-postgres.render.com/attendance_db_so9v")
-
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
