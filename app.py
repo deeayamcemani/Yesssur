@@ -23,7 +23,10 @@ app.config["SECRET_KEY"] = secrets.token_hex(16)
 # 👉 Use DATABASE_URL from Render if it exists; otherwise, use local SQLite
 db_url = os.getenv("DATABASE_URL", "sqlite:///attendance.db")
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://attendance_db_so9v_user:vvqir6Wc3OoNu3uVIGGgW4cKs0TtjPyw@dpg-d3jd5sh5pdvs73ebt0dg-a.oregon-postgres.render.com/attendance_db_so9v")
+    db_url = db_url.replace(
+        "postgres://",
+        "postgresql://attendance_db_so9v_user:vvqir6Wc3OoNu3uVIGGgW4cKs0TtjPyw@dpg-d3jd5sh5pdvs73ebt0dg-a.oregon-postgres.render.com/attendance_db_so9v",
+    )
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -38,11 +41,13 @@ from models import (
     Announcement,
     AnnouncementRead,
 )
+
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -1390,8 +1395,8 @@ if __name__ == "__main__":
             if not admin:
                 admin = User(
                     full_name="System Administrator",
-                    matric_number="admin",
-                    password=generate_password_hash("admin123"),
+                    matric_number="admin@csc",
+                    password=generate_password_hash("admin@csc123"),
                     role="admin",
                 )
                 db.session.add(admin)
