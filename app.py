@@ -1412,16 +1412,4 @@ if __name__ == "__main__":
             print("If this persists, try deleting 'attendance.db' and restarting")
             raise
 
-    print("\n=== CS Present Attendance System ===")
-    print("Admin Panel: http://localhost:5000 (login: admin/admin123)")
-    print("Student Portal: http://localhost:5000 (students create accounts)")
-    print("\nFeatures included:")
-    print("  * Course Management with CRUD operations")
-    print("  * Student password management")
-    print("  * Real-time announcements system")
-    print("  * Weekly attendance tracking")
-    print("  * Filtered data exports")
-    print("  * Mobile-responsive design")
-    print("\nPress Ctrl+C to stop the server")
-
     app.run(host="0.0.0.0", port=5000)
