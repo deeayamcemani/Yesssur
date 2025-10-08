@@ -40,10 +40,8 @@ from models import (
 )
 db.init_app(app)
 
-@app.before_first_request
-def create_tables():
+with app.app_context():
     db.create_all()
-    
     
 def login_required(f):
     @wraps(f)
