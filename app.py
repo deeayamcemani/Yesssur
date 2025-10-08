@@ -40,6 +40,11 @@ from models import (
 )
 db.init_app(app)
 
+@app.before_first_request
+def create_tables():
+    db.create_all()
+    
+    
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
