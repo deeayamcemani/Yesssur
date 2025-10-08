@@ -19,10 +19,16 @@ from openpyxl import Workbook
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = secrets.token_hex(16)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///attendance.db"
+
+# 👉 Use DATABASE_URL from Render if it exists; otherwise, use local SQLite
+db_url = os.getenv("DATABASE_URL", "sqlite:///attendance.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://attendance_db_so9v_user:vvqir6Wc3OoNu3uVIGGgW4cKs0TtjPyw@dpg-d3jd5sh5pdvs73ebt0dg-a.oregon-postgres.render.com/attendance_db_so9v")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize db with app
+
 from models import (
     db,
     User,
@@ -33,9 +39,7 @@ from models import (
     Announcement,
     AnnouncementRead,
 )
-
 db.init_app(app)
-
 
 def login_required(f):
     @wraps(f)
